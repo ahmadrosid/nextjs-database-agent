@@ -2,8 +2,39 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import chalk from 'chalk';
+import { marked } from 'marked';
+import { markedTerminal } from 'marked-terminal';
 import { CoreAgent } from '../core/CoreAgent.js';
 import { ProgressEvent } from '../types/index.js';
+
+// Configure marked-terminal for better terminal rendering
+marked.setOptions({
+  renderer: markedTerminal({
+    code: chalk.yellow,
+    blockquote: chalk.gray.italic,
+    html: chalk.gray,
+    heading: chalk.green.bold,
+    hr: chalk.reset,
+    listitem: chalk.reset,
+    list: chalk.reset,
+    paragraph: chalk.reset,
+    strong: chalk.bold,
+    em: chalk.italic,
+    codespan: chalk.yellow,
+    del: chalk.dim.gray.strikethrough,
+    link: chalk.blue,
+    href: chalk.blue.underline,
+  }) as any,
+});
+
+const formatMarkdown = (content: string): string => {
+  try {
+    const result = marked(content);
+    return typeof result === 'string' ? result : content;
+  } catch (error) {
+    return content;
+  }
+};
 
 interface OutputMessage {
   id: string;
@@ -33,7 +64,7 @@ const DatabaseAgentApp: React.FC = () => {
 
     const interval = setInterval(() => {
       setAnimationFrame(prev => (prev + 1) % 4);
-    }, 500);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [currentStatus]);
@@ -59,7 +90,9 @@ const DatabaseAgentApp: React.FC = () => {
     };
 
     coreAgent.on('progress', handleProgress);
-    return () => coreAgent.off('progress', handleProgress);
+    return () => {
+      coreAgent.off('progress', handleProgress);
+    };
   }, [coreAgent]);
 
   const handleSubmit = useCallback(async (value: string) => {
@@ -109,14 +142,21 @@ const DatabaseAgentApp: React.FC = () => {
       <Box flexDirection="column" flexGrow={1} paddingX={1} paddingY={1}>
         {messages.map((message) => (
           <Box key={message.id} marginBottom={1}>
-            <Text color={
-              message.type === 'user' ? 'cyan' :
-              message.type === 'progress' ? 'yellow' : 'green'
-            }>
-              {message.type === 'user' ? '> ' :
-               message.type === 'progress' ? '⚡ ' : '🤖 '}
-              {message.content}
-            </Text>
+            {message.type === 'agent' ? (
+              <Text>
+                <Text color="green">🤖 </Text>
+                {formatMarkdown(message.content)}
+              </Text>
+            ) : (
+              <Text color={
+                message.type === 'user' ? 'cyan' :
+                message.type === 'progress' ? 'yellow' : 'green'
+              }>
+                {message.type === 'user' ? '> ' :
+                 message.type === 'progress' ? '⚡ ' : '🤖 '}
+                {message.content}
+              </Text>
+            )}
           </Box>
         ))}
       </Box>
@@ -124,7 +164,7 @@ const DatabaseAgentApp: React.FC = () => {
       {/* Status Area - between output and input */}
       {currentStatus && (
         <Text color="yellow">
-          ⚡ {currentStatus}{'.'.repeat(animationFrame)}
+          ⚡ {currentStatus} {'.'.repeat(animationFrame)}
         </Text>
       )}
 
