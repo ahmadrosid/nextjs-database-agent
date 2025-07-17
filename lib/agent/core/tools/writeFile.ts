@@ -10,13 +10,11 @@ export const writeFileTool: Tool = {
     properties: {
       path: {
         type: 'string',
-        description: 'Path to the file to write',
-        required: true
+        description: 'Path to the file to write'
       },
       content: {
         type: 'string',
-        description: 'Content to write to the file',
-        required: true
+        description: 'Content to write to the file'
       },
       createDirs: {
         type: 'boolean',

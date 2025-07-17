@@ -10,8 +10,7 @@ export const readFileTool: Tool = {
     properties: {
       path: {
         type: 'string',
-        description: 'Path to the file to read',
-        required: true
+        description: 'Path to the file to read'
       }
     },
     required: ['path']

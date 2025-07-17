@@ -13,8 +13,7 @@ export const bashCommandTool: Tool = {
     properties: {
       command: {
         type: 'string',
-        description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf',
-        required: true
+        description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf'
       },
       workingDirectory: {
         type: 'string',
