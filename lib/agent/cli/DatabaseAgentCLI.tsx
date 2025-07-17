@@ -55,8 +55,8 @@ const DatabaseAgentApp: React.FC = () => {
   });
 
   return (
-    <Box flexDirection="column" height={process.stdout.rows || 24}>
-      {/* Output Area */}
+    <Box flexDirection="column" minHeight="100%">
+      {/* Output Area - grows dynamically */}
       <Box flexDirection="column" flexGrow={1} paddingX={1} paddingY={1}>
         {messages.map((message) => (
           <Box key={message.id} marginBottom={1}>
@@ -68,8 +68,8 @@ const DatabaseAgentApp: React.FC = () => {
         ))}
       </Box>
 
-      {/* Input Area */}
-      <Box borderStyle="single" paddingX={1}>
+      {/* Input Area - always at bottom */}
+      <Box borderStyle="single" paddingX={1} flexShrink={0}>
         <Text color="yellow">Query: </Text>
         <TextInput
           value={input}
