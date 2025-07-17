@@ -1,12 +1,14 @@
 import { EventEmitter } from 'eventemitter3';
 import { LLMService } from './llm.js';
-import { ProgressEvent } from '../types/index.js';
+import { ProgressEvent, TokenUsage } from '../types/index.js';
 import { ToolManager } from './tools/index.js';
+import { logger } from '../utils/logger.js';
 
 export class CoreAgent extends EventEmitter {
   private llmService: LLMService;
   private toolManager: ToolManager;
   private isProcessing = false;
+  private thinkingOutput: string = '';
 
   constructor() {
     super();
@@ -20,6 +22,7 @@ export class CoreAgent extends EventEmitter {
     }
 
     this.isProcessing = true;
+    this.thinkingOutput = ''; // Reset thinking output
 
     try {
       // Emit thinking event
@@ -40,6 +43,8 @@ export class CoreAgent extends EventEmitter {
       const response = await this.llmService.generateResponse(
         query, 
         (content: string) => {
+          // Capture thinking output
+          this.thinkingOutput = content;
           this.emitProgress({
             type: 'thinking',
             message: content,
@@ -48,13 +53,43 @@ export class CoreAgent extends EventEmitter {
         },
         this.toolManager,
         (toolName) => {
+          logger.debug('CoreAgent', 'onToolExecution callback received', { toolName });
+          
+          // Emit thinking output as message before tool execution
+          if (this.thinkingOutput.trim()) {
+            this.emitProgress({
+              type: 'thinking_complete',
+              message: this.thinkingOutput,
+              timestamp: new Date(),
+            });
+            this.thinkingOutput = ''; // Clear after emitting
+          }
+          
+          logger.debug('CoreAgent', 'emitting executing_tools progress', { message: `Executing ${toolName}` });
           this.emitProgress({
             type: 'executing_tools',
-            message: `Executing ${toolName}...`,
+            message: `Executing ${toolName}`,
             timestamp: new Date(),
+          });
+        },
+        (tokenUsage: TokenUsage) => {
+          this.emitProgress({
+            type: 'token_update',
+            message: `Tokens: ${tokenUsage.inputTokens}→${tokenUsage.outputTokens} (${tokenUsage.totalTokens})`,
+            timestamp: new Date(),
+            tokenUsage,
           });
         }
       );
+
+      // Emit thinking output as message if it wasn't emitted before
+      if (this.thinkingOutput.trim()) {
+        this.emitProgress({
+          type: 'thinking_complete',
+          message: this.thinkingOutput,
+          timestamp: new Date(),
+        });
+      }
 
       // Emit generating event
       this.emitProgress({

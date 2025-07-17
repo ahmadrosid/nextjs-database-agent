@@ -6,6 +6,7 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import { CoreAgent } from '../core/CoreAgent.js';
 import { ProgressEvent } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 // Configure marked-terminal for better terminal rendering
 marked.setOptions({
@@ -56,34 +57,52 @@ const DatabaseAgentApp: React.FC = () => {
   ]);
   const [coreAgent] = useState(() => new CoreAgent());
   const [currentStatus, setCurrentStatus] = useState<string>('');
-  const [animationFrame, setAnimationFrame] = useState<number>(0);
+  const [tokenUsage, setTokenUsage] = useState<{ inputTokens: number; outputTokens: number; totalTokens: number } | null>(null);
 
-  // Animation for status display
-  useEffect(() => {
-    if (!currentStatus) return;
-
-    const interval = setInterval(() => {
-      setAnimationFrame(prev => (prev + 1) % 4);
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [currentStatus]);
 
   // Listen to progress events from CoreAgent
   useEffect(() => {
     const handleProgress = (event: ProgressEvent) => {
+      logger.debug('CLI', 'handleProgress received event', { type: event.type, message: event.message });
+      
       // Update current status for display with short messages
       if (event.type === 'complete' || event.type === 'error') {
         setCurrentStatus('');
-        setAnimationFrame(0);
+        setTokenUsage(null);
+      } else if (event.type === 'token_update') {
+        // Update token usage without changing status
+        if (event.tokenUsage) {
+          setTokenUsage(event.tokenUsage);
+        }
+      } else if (event.type === 'thinking_complete') {
+        // Add thinking output to message history
+        if (event.message.trim()) {
+          const thinkingMessage: OutputMessage = {
+            id: Date.now().toString(),
+            type: 'agent',
+            content: `**Thinking:** ${event.message}`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, thinkingMessage]);
+        }
       } else {
-        const statusMap = {
-          thinking: 'Thinking',
-          analyzing: 'Analyzing',
-          executing_tools: 'Executing tools',
-          generating: 'Generating'
-        };
-        setCurrentStatus(statusMap[event.type] || event.type);
+        let newStatus: string;
+        
+        if (event.type === 'executing_tools') {
+          // Use the actual message for tool execution to show detailed info
+          newStatus = event.message;
+        } else {
+          // Use status map for other events
+          const statusMap = {
+            thinking: 'Thinking',
+            analyzing: 'Analyzing',
+            generating: 'Generating'
+          };
+          newStatus = statusMap[event.type] || event.type;
+        }
+        
+        logger.debug('CLI', 'setting currentStatus', { newStatus });
+        setCurrentStatus(newStatus);
       }
 
       // Don't add progress messages to history - only show in status area
@@ -163,9 +182,14 @@ const DatabaseAgentApp: React.FC = () => {
 
       {/* Status Area - between output and input */}
       {currentStatus && (
-        <Text color="yellow">
-          ⚡ {currentStatus} {'.'.repeat(animationFrame)}
-        </Text>
+        <Box>
+          <Text color="yellow">
+            ⚡ {currentStatus}
+            {tokenUsage && (
+              <Text color="gray"> [{tokenUsage.inputTokens}→{tokenUsage.outputTokens} tokens]</Text>
+            )}
+          </Text>
+        </Box>
       )}
 
       {/* Input Area - always at bottom */}
@@ -184,6 +208,7 @@ const DatabaseAgentApp: React.FC = () => {
 
 export class DatabaseAgentCLI {
   start() {
+    logger.info('CLI', 'Starting Database Agent CLI');
     console.log(chalk.blue('Starting Database Agent CLI...'));
     render(<DatabaseAgentApp />);
   }

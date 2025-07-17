@@ -80,13 +80,14 @@ describe('CoreAgent', () => {
       const result = await coreAgent.processQuery('list files');
 
       expect(result).toBe(mockResponse);
-      expect(events).toHaveLength(6);
+      expect(events).toHaveLength(7);
       expect(events[0].type).toBe('thinking');
       expect(events[1].type).toBe('analyzing');
       expect(events[2].type).toBe('thinking'); // From onThinking callback
-      expect(events[3].type).toBe('executing_tools');
-      expect(events[4].type).toBe('generating');
-      expect(events[5].type).toBe('complete');
+      expect(events[3].type).toBe('thinking_complete'); // When thinking is complete
+      expect(events[4].type).toBe('executing_tools');
+      expect(events[5].type).toBe('generating');
+      expect(events[6].type).toBe('complete');
     });
   });
 
@@ -186,7 +187,8 @@ describe('CoreAgent', () => {
         'test query',
         expect.any(Function), // onThinking callback
         expect.any(Object),   // toolManager
-        expect.any(Function)  // onToolExecution callback
+        expect.any(Function), // onToolExecution callback
+        expect.any(Function)  // onTokenUpdate callback
       );
     });
 
@@ -209,7 +211,7 @@ describe('CoreAgent', () => {
 
       const toolEvent = events.find(e => e.type === 'executing_tools');
       expect(toolEvent).toBeDefined();
-      expect(toolEvent?.message).toBe('Executing read_file...');
+      expect(toolEvent?.message).toBe('Executing read_file');
     });
 
     it('should emit thinking events when onThinking callback is called', async () => {

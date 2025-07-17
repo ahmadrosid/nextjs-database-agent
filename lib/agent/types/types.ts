@@ -1,8 +1,15 @@
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 export interface ProgressEvent {
-  type: 'thinking' | 'analyzing' | 'generating' | 'executing_tools' | 'complete' | 'error';
+  type: 'thinking' | 'analyzing' | 'generating' | 'executing_tools' | 'complete' | 'error' | 'token_update' | 'thinking_complete';
   message: string;
   timestamp: Date;
   data?: any;
+  tokenUsage?: TokenUsage;
 }
 
 export interface AgentResponse {
