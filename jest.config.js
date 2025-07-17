@@ -21,7 +21,7 @@ const config = {
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chalk|ink|ink-text-input)/)'
+    'node_modules/(?!(chalk|ink|ink-text-input|globby)/)'
   ],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [

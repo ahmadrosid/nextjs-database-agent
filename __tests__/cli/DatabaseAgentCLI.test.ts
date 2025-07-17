@@ -1,6 +1,11 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { DatabaseAgentCLI } from '../../lib/agent/cli/DatabaseAgentCLI';
 
+// Mock globby to avoid ES module issues
+jest.mock('globby', () => ({
+  globby: jest.fn().mockResolvedValue([])
+}));
+
 // Mock Ink components
 jest.mock('ink', () => ({
   render: jest.fn(),
