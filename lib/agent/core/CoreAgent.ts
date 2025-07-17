@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
 import { LLMService } from './llm.js';
-import { ProgressEvent, AgentResponse } from '../types/index.js';
+import { ProgressEvent } from '../types/index.js';
 import { ToolManager } from './tools/index.js';
 
 export class CoreAgent extends EventEmitter {
@@ -20,7 +20,6 @@ export class CoreAgent extends EventEmitter {
     }
 
     this.isProcessing = true;
-    const jobId = Date.now().toString();
 
     try {
       // Emit thinking event
@@ -37,16 +36,9 @@ export class CoreAgent extends EventEmitter {
         timestamp: new Date(),
       });
 
-      // Generate response using LLM with thinking callback and tools
+      // Generate response using LLM with tools
       const response = await this.llmService.generateResponse(
         query, 
-        (thinkingContent) => {
-          this.emitProgress({
-            type: 'thinking',
-            message: thinkingContent,
-            timestamp: new Date(),
-          });
-        },
         this.toolManager,
         (toolName) => {
           this.emitProgress({

@@ -1,15 +1,20 @@
 import { ToolManager } from '../../lib/agent/core/tools/index';
 import { ToolCall, ToolResult } from '../../lib/agent/types/index';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { resolve } from 'path';
+import { exec } from 'child_process';
 
-// Mock fs/promises and globby to avoid file system dependencies
+// Mock fs/promises, globby, and child_process to avoid file system dependencies
 jest.mock('fs/promises');
 jest.mock('globby', () => ({
   globby: jest.fn()
 }));
+jest.mock('child_process');
 
 const mockReadFile = jest.mocked(readFile);
+const mockWriteFile = jest.mocked(writeFile);
+const mockMkdir = jest.mocked(mkdir);
+const mockExec = jest.mocked(exec);
 const mockGlobby = require('globby').globby;
 
 describe('ToolManager', () => {
@@ -21,12 +26,14 @@ describe('ToolManager', () => {
   });
 
   describe('Tool Registration', () => {
-    it('should register list_files and read_file tools by default', () => {
+    it('should register all tools by default', () => {
       const availableTools = toolManager.getAvailableTools();
       
-      expect(availableTools).toHaveLength(2);
+      expect(availableTools).toHaveLength(4);
       expect(availableTools.map(tool => tool.name)).toContain('list_files');
       expect(availableTools.map(tool => tool.name)).toContain('read_file');
+      expect(availableTools.map(tool => tool.name)).toContain('write_file');
+      expect(availableTools.map(tool => tool.name)).toContain('bash_command');
     });
 
     it('should provide tool descriptions for LLM', () => {
@@ -34,6 +41,8 @@ describe('ToolManager', () => {
       
       expect(toolsDescription).toContain('list_files');
       expect(toolsDescription).toContain('read_file');
+      expect(toolsDescription).toContain('write_file');
+      expect(toolsDescription).toContain('bash_command');
       expect(toolsDescription).toContain('Description:');
       expect(toolsDescription).toContain('Parameters:');
     });
@@ -228,6 +237,252 @@ describe('ToolManager', () => {
 
       expect(result.result).toContain('Contents of empty.txt');
       expect(result.error).toBeUndefined();
+    });
+  });
+
+  describe('Write File Tool', () => {
+    it('should execute write_file tool successfully', async () => {
+      mockWriteFile.mockResolvedValue(undefined);
+      mockMkdir.mockResolvedValue(undefined);
+
+      const toolCall: ToolCall = {
+        name: 'write_file',
+        parameters: { 
+          path: 'test.txt',
+          content: 'Hello World'
+        }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('write_file');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Successfully wrote 11 characters to test.txt');
+      expect(mockWriteFile).toHaveBeenCalledWith(resolve('test.txt'), 'Hello World', 'utf-8');
+      expect(mockMkdir).toHaveBeenCalled();
+    });
+
+    it('should handle write_file with createDirs disabled', async () => {
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const toolCall: ToolCall = {
+        name: 'write_file',
+        parameters: { 
+          path: 'test.txt',
+          content: 'Hello World',
+          createDirs: false
+        }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('write_file');
+      expect(result.error).toBeUndefined();
+      expect(mockWriteFile).toHaveBeenCalledWith(resolve('test.txt'), 'Hello World', 'utf-8');
+      expect(mockMkdir).not.toHaveBeenCalled();
+    });
+
+    it('should handle write_file errors gracefully', async () => {
+      const errorMessage = 'Permission denied';
+      mockWriteFile.mockRejectedValue(new Error(errorMessage));
+
+      const toolCall: ToolCall = {
+        name: 'write_file',
+        parameters: { 
+          path: 'restricted.txt',
+          content: 'Hello World'
+        }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('write_file');
+      expect(result.result).toContain('Error writing file');
+      expect(result.result).toContain(errorMessage);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle missing write_file parameters', async () => {
+      const toolCall: ToolCall = {
+        name: 'write_file',
+        parameters: { path: 'test.txt' } // Missing content
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('write_file');
+      expect(result.result).toContain('Error: Content is required');
+      expect(result.error).toBeUndefined();
+    });
+  });
+
+  describe('Bash Command Tool', () => {
+    it('should execute allowed bash commands successfully', async () => {
+      const mockCallback = jest.fn();
+      mockCallback.mockImplementation((callback) => {
+        callback(null, { stdout: 'Directory created', stderr: '' });
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'mkdir -p test-dir' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: mkdir -p test-dir');
+      expect(result.result).toContain('Output: Directory created');
+    });
+
+    it('should reject disallowed bash commands', async () => {
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'ls -la' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command not allowed');
+      expect(result.result).toContain('mkdir, mv, rm -rf');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject commands with dangerous characters', async () => {
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'mkdir test && echo "hack"' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command contains forbidden characters');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle rm -rf commands', async () => {
+      const mockCallback = jest.fn();
+      mockCallback.mockImplementation((callback) => {
+        callback(null, { stdout: '', stderr: '' });
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'rm -rf test-dir' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: rm -rf test-dir');
+    });
+
+    it('should handle mv commands', async () => {
+      const mockCallback = jest.fn();
+      mockCallback.mockImplementation((callback) => {
+        callback(null, { stdout: '', stderr: '' });
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'mv oldfile.txt newfile.txt' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: mv oldfile.txt newfile.txt');
+    });
+
+    it('should handle bash command execution errors', async () => {
+      const mockCallback = jest.fn();
+      const execError = new Error('Command failed') as any;
+      execError.code = 1;
+      execError.stderr = 'Directory not found';
+      mockCallback.mockImplementation((callback) => {
+        callback(execError);
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'mkdir /restricted' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command failed with exit code 1');
+      expect(result.result).toContain('Directory not found');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle missing command parameter', async () => {
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: {} // Missing command
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command is required');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle timeout errors', async () => {
+      const mockCallback = jest.fn();
+      const timeoutError = new Error('Command timed out');
+      timeoutError.message = 'timeout';
+      mockCallback.mockImplementation((callback) => {
+        callback(timeoutError);
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'mkdir long-running-task' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command timed out (30 second limit)');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should use custom working directory', async () => {
+      const mockCallback = jest.fn();
+      mockCallback.mockImplementation((callback) => {
+        callback(null, { stdout: 'Directory created', stderr: '' });
+      });
+      mockExec.mockImplementation(mockCallback);
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { 
+          command: 'mkdir test-dir',
+          workingDirectory: '/custom/path'
+        }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(mockExec).toHaveBeenCalledWith('mkdir test-dir', {
+        cwd: resolve('/custom/path'),
+        timeout: 30000,
+        env: process.env
+      });
     });
   });
 });

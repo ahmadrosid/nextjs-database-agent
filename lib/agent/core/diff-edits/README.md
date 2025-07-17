@@ -18,20 +18,23 @@ Key Features
 - Error handling - Throws errors for unmatched search content
 
 Usage
-
+```js
 const result = await constructNewFileContent(
-diffContent,   // Your diff with SEARCH/REPLACE blocks
-originalFile,  // Current file content  
-isFinalChunk  // Whether this is the last chunk
+    diffContent,   // Your diff with SEARCH/REPLACE blocks
+    originalFile,  // Current file content  
+    isFinalChunk  // Whether this is the last chunk
 )
+```
 
 SEARCH/REPLACE Format
 
+```
 <<<<<<< SEARCH
 old content to find
 =======
 new content to replace with
 >>>>>>> REPLACE
+```
 
 ## How to prompt LLM to use this?
 
@@ -40,11 +43,13 @@ To use this diff algorithm with an LLM, you need to train it to output in the sp
 Core Prompt Structure
 
 Tell the LLM to make changes using this exact format:
+```
 <<<<<<< SEARCH
 [exact content to find]
 =======
 [replacement content]
 >>>>>>> REPLACE
+```
 
 Key Prompting Guidelines
 

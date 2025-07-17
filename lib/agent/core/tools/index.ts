@@ -1,5 +1,7 @@
 import { listFilesTool } from './listFiles.js';
 import { readFileTool } from './readFile.js';
+import { writeFileTool } from './writeFile.js';
+import { bashCommandTool } from './bashCommand.js';
 import { Tool, ToolCall, ToolResult } from '../../types/index.js';
 
 export class ToolManager {
@@ -8,6 +10,8 @@ export class ToolManager {
   constructor() {
     this.registerTool(listFilesTool);
     this.registerTool(readFileTool);
+    this.registerTool(writeFileTool);
+    this.registerTool(bashCommandTool);
   }
 
   registerTool(tool: Tool): void {
@@ -52,7 +56,16 @@ Description: ${tool.description}
 Parameters: ${JSON.stringify(tool.parameters, null, 2)}
 `).join('\n');
   }
+
+  getToolsForClaudeAPI(): any[] {
+    const tools = this.getAvailableTools();
+    return tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.parameters
+    }));
+  }
 }
 
 export * from '../../types/index.js';
-export { listFilesTool, readFileTool };
+export { listFilesTool, readFileTool, writeFileTool, bashCommandTool };
