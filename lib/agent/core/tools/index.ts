@@ -19,7 +19,7 @@ export class ToolManager {
     this.tools.set(tool.name, tool);
   }
 
-  async executeTool(toolCall: ToolCall): Promise<ToolResult> {
+  async executeTool(toolCall: ToolCall, abortSignal?: AbortSignal): Promise<ToolResult> {
     const tool = this.tools.get(toolCall.name);
     
     // Log tool call arguments
@@ -45,7 +45,7 @@ export class ToolManager {
     }
 
     try {
-      const result = await tool.execute(toolCall.parameters);
+      const result = await tool.execute(toolCall.parameters, abortSignal);
       const toolResult = {
         name: toolCall.name,
         result

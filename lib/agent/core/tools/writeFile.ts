@@ -24,7 +24,7 @@ export const writeFileTool: Tool = {
     },
     required: ['path', 'content']
   },
-  execute: async (params: Record<string, any>) => {
+  execute: async (params: Record<string, any>, abortSignal?: AbortSignal) => {
     try {
       if (!params.path) {
         return 'Error: File path is required';
@@ -34,6 +34,11 @@ export const writeFileTool: Tool = {
         return 'Error: Content is required';
       }
       
+      // Check if operation was aborted before starting
+      if (abortSignal?.aborted) {
+        return 'Error: Operation was cancelled';
+      }
+      
       const filePath = resolve(params.path);
       const createDirs = params.createDirs !== false; // Default to true
       
@@ -41,13 +46,21 @@ export const writeFileTool: Tool = {
       if (createDirs) {
         const parentDir = dirname(filePath);
         await mkdir(parentDir, { recursive: true });
+        
+        // Check again after directory creation
+        if (abortSignal?.aborted) {
+          return 'Error: Operation was cancelled';
+        }
       }
       
-      // Write the file
+      // Write the file (Note: Node.js fs.writeFile doesn't support AbortSignal, but we check before the operation)
       await writeFile(filePath, params.content, 'utf-8');
       
       return `Successfully wrote ${params.content.length} characters to ${params.path}`;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return 'Error: File write was cancelled';
+      }
       return `Error writing file: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }

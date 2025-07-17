@@ -24,7 +24,8 @@ export class LLMService {
     onThinking?: (content: string) => void,
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void
+    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
+    abortSignal?: AbortSignal
   ): Promise<string> {
     try {
       // Check if query contains thinking triggers
@@ -62,6 +63,13 @@ export class LLMService {
       
       // Process the stream
       for await (const chunk of stream) {
+        // Check if operation was aborted
+        if (abortSignal?.aborted) {
+          const abortError = new Error('Operation was cancelled');
+          abortError.name = 'AbortError';
+          throw abortError;
+        }
+        
         if (chunk.type === 'message_start') {
           // Get input tokens from message start
           inputTokens = chunk.message.usage.input_tokens;
@@ -119,11 +127,16 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate);
+        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
       }
 
       return fullResponse || 'I was unable to generate a response.';
     } catch (error) {
+      // Re-throw abort errors as-is to preserve the message
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Operation was cancelled')) {
+        throw error;
+      }
+      
       logger.error('LLMService', 'LLM API Error', error);
       throw new Error('Failed to generate response from LLM');
     }
@@ -134,7 +147,8 @@ export class LLMService {
     messages: Anthropic.Messages.MessageParam[],
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void
+    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
+    abortSignal?: AbortSignal
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
@@ -150,6 +164,13 @@ export class LLMService {
     const toolResults: any[] = [];
     
     for (const contentBlock of toolUseContent) {
+      // Check if operation was aborted
+      if (abortSignal?.aborted) {
+        const abortError = new Error('Operation was cancelled');
+        abortError.name = 'AbortError';
+        throw abortError;
+      }
+
       if (contentBlock.type === 'tool_use') {
         const toolCall = {
           name: contentBlock.name,
@@ -165,7 +186,7 @@ export class LLMService {
         }
 
         // Execute the tool
-        const toolResult = await toolManager.executeTool(toolCall);
+        const toolResult = await toolManager.executeTool(toolCall, abortSignal);
         
         toolResults.push({
           tool_use_id: contentBlock.id,
@@ -181,18 +202,25 @@ export class LLMService {
       content: toolResults
     });
 
+    // Check if operation was aborted before final response
+    if (abortSignal?.aborted) {
+      const abortError = new Error('Operation was cancelled');
+      abortError.name = 'AbortError';
+      throw abortError;
+    }
+
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2048,
       system: this.systemPrompt,
       messages,
-      tools: toolManager.getToolsForClaudeAPI()
+      tools: toolManager.getToolsForClaudeAPI(),
     });
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
     }
 
     // Return the final text response
@@ -224,7 +252,8 @@ export class LLMService {
     messages: Anthropic.Messages.MessageParam[],
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void
+    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
+    abortSignal?: AbortSignal
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
@@ -240,6 +269,13 @@ export class LLMService {
     const toolResults: any[] = [];
     
     for (const contentBlock of response.content) {
+      // Check if operation was aborted
+      if (abortSignal?.aborted) {
+        const abortError = new Error('Operation was cancelled');
+        abortError.name = 'AbortError';
+        throw abortError;
+      }
+
       if (contentBlock.type === 'tool_use') {
         const toolCall = {
           name: contentBlock.name,
@@ -255,7 +291,7 @@ export class LLMService {
         }
 
         // Execute the tool
-        const toolResult = await toolManager.executeTool(toolCall);
+        const toolResult = await toolManager.executeTool(toolCall, abortSignal);
         
         toolResults.push({
           tool_use_id: contentBlock.id,
@@ -271,18 +307,25 @@ export class LLMService {
       content: toolResults
     });
 
+    // Check if operation was aborted before final response
+    if (abortSignal?.aborted) {
+      const abortError = new Error('Operation was cancelled');
+      abortError.name = 'AbortError';
+      throw abortError;
+    }
+
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2048,
       system: this.systemPrompt,
       messages,
-      tools: toolManager.getToolsForClaudeAPI()
+      tools: toolManager.getToolsForClaudeAPI(),
     });
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
     }
 
     // Return the final text response

@@ -64,7 +64,7 @@ const DatabaseAgentApp: React.FC = () => {
   useEffect(() => {
     const handleProgress = (event: ProgressEvent) => {      
       // Update current status for display with short messages
-      if (event.type === 'complete' || event.type === 'error') {
+      if (event.type === 'complete' || event.type === 'error' || event.type === 'aborted') {
         setCurrentStatus('');
         setTokenUsage(null);
       } else if (event.type === 'token_update') {
@@ -149,7 +149,9 @@ const DatabaseAgentApp: React.FC = () => {
       const errorMessage: OutputMessage = {
         id: (Date.now() + 1).toString(),
         type: 'agent',
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        content: error instanceof Error && error.message === 'Operation was cancelled' 
+          ? 'Operation was cancelled by user.' 
+          : 'Sorry, I encountered an error processing your request. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -159,6 +161,14 @@ const DatabaseAgentApp: React.FC = () => {
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
       process.exit(0);
+    }
+    if (key.escape) {
+      // Abort current operation if processing
+      if (coreAgent.isCurrentlyProcessing()) {
+        coreAgent.abort();
+        setCurrentStatus('');
+        setTokenUsage(null);
+      }
     }
   });
 

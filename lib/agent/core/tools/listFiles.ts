@@ -26,8 +26,13 @@ export const listFilesTool: Tool = {
       }
     }
   },
-  execute: async (params: Record<string, any>) => {
+  execute: async (params: Record<string, any>, abortSignal?: AbortSignal) => {
     try {
+      // Check if operation was aborted before starting
+      if (abortSignal?.aborted) {
+        return 'Error: Operation was cancelled';
+      }
+      
       const targetPath = params.path || '.';
       const pattern = params.pattern || '**/*';
       const includeHidden = params.includeHidden || false;
@@ -44,12 +49,24 @@ export const listFilesTool: Tool = {
         absolute: false // Return relative paths
       });
       
+      // Check if operation was aborted after globby
+      if (abortSignal?.aborted) {
+        return 'Error: Operation was cancelled';
+      }
+      
       // Sort files for better readability
       const sortedFiles = files.sort();
       
       // Format output with file/directory indicators
       const fileList = await Promise.all(
         sortedFiles.map(async (file) => {
+          // Check abort signal periodically during processing
+          if (abortSignal?.aborted) {
+            const abortError = new Error('Operation was cancelled');
+            abortError.name = 'AbortError';
+            throw abortError;
+          }
+          
           try {
             const fullPath = resolve(absolutePath, file);
             const stats = await stat(fullPath);
@@ -68,6 +85,9 @@ export const listFilesTool: Tool = {
       
       return `Files in ${targetPath} (${fileList.length} items):\n${fileList.join('\n')}`;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return 'Error: File listing was cancelled';
+      }
       return `Error listing files: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }

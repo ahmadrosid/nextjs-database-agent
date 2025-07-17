@@ -188,7 +188,8 @@ describe('CoreAgent', () => {
         expect.any(Function), // onThinking callback
         expect.any(Object),   // toolManager
         expect.any(Function), // onToolExecution callback
-        expect.any(Function)  // onTokenUpdate callback
+        expect.any(Function), // onTokenUpdate callback
+        expect.any(Object)    // abortSignal
       );
     });
 

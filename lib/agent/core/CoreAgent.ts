@@ -9,6 +9,7 @@ export class CoreAgent extends EventEmitter {
   private toolManager: ToolManager;
   private isProcessing = false;
   private thinkingOutput: string = '';
+  private currentAbortController: AbortController | null = null;
 
   constructor() {
     super();
@@ -23,6 +24,7 @@ export class CoreAgent extends EventEmitter {
 
     this.isProcessing = true;
     this.thinkingOutput = ''; // Reset thinking output
+    this.currentAbortController = new AbortController();
 
     try {
       // Emit thinking event
@@ -78,7 +80,8 @@ export class CoreAgent extends EventEmitter {
             timestamp: new Date(),
             tokenUsage,
           });
-        }
+        },
+        this.currentAbortController.signal
       );
 
       // Emit thinking output as message if it wasn't emitted before
@@ -107,6 +110,18 @@ export class CoreAgent extends EventEmitter {
 
       return response;
     } catch (error) {
+      // Handle abort signal
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.emitProgress({
+          type: 'aborted',
+          message: 'Operation was cancelled',
+          timestamp: new Date(),
+          data: { error },
+        });
+        // Re-throw the original error to preserve the message
+        throw error;
+      }
+
       // Emit error event
       this.emitProgress({
         type: 'error',
@@ -118,6 +133,7 @@ export class CoreAgent extends EventEmitter {
       throw error;
     } finally {
       this.isProcessing = false;
+      this.currentAbortController = null;
     }
   }
 
@@ -127,5 +143,11 @@ export class CoreAgent extends EventEmitter {
 
   isCurrentlyProcessing(): boolean {
     return this.isProcessing;
+  }
+
+  abort(): void {
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+    }
   }
 }

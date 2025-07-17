@@ -23,7 +23,7 @@ export const bashCommandTool: Tool = {
     },
     required: ['command']
   },
-  execute: async (params: Record<string, any>) => {
+  execute: async (params: Record<string, any>, abortSignal?: AbortSignal) => {
     try {
       if (!params.command) {
         return 'Error: Command is required';
@@ -73,7 +73,8 @@ export const bashCommandTool: Tool = {
       const { stdout, stderr } = await execAsync(command, {
         cwd: absoluteWorkingDir,
         timeout: 30000, // 30 second timeout
-        env: process.env
+        env: process.env,
+        signal: abortSignal
       });
 
       let result = `Command executed successfully: ${command}`;
@@ -90,6 +91,11 @@ export const bashCommandTool: Tool = {
 
     } catch (error) {
       if (error instanceof Error) {
+        // Handle abort signal
+        if (error.name === 'AbortError') {
+          return 'Error: Command was cancelled';
+        }
+        
         // Handle timeout and other exec errors
         if (error.message.includes('timeout')) {
           return 'Error: Command timed out (30 second limit)';

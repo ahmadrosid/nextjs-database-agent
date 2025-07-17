@@ -2,7 +2,7 @@ export interface Tool {
   name: string;
   description: string;
   parameters: Record<string, any>;
-  execute: (params: Record<string, any>) => Promise<string>;
+  execute: (params: Record<string, any>, abortSignal?: AbortSignal) => Promise<string>;
 }
 
 export interface ToolCall {
