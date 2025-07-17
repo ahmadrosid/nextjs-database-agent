@@ -7,13 +7,13 @@ const execAsync = promisify(exec);
 
 export const bashCommandTool: Tool = {
   name: 'bash_command',
-  description: 'Execute allowed bash commands for file operations (mkdir, mv, rm -rf only)',
+  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, rm -rf, npm commands)',
   parameters: {
     type: 'object',
     properties: {
       command: {
         type: 'string',
-        description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf'
+        description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf, npm install, npm run, npm start, npm test, npm build'
       },
       workingDirectory: {
         type: 'string',
@@ -36,7 +36,12 @@ export const bashCommandTool: Tool = {
       const allowedCommands = [
         'mkdir',
         'mv',
-        'rm -rf'
+        'rm -rf',
+        'npm install',
+        'npm run',
+        'npm start',
+        'npm test',
+        'npm build'
       ];
 
       // Check if command starts with an allowed command
@@ -44,6 +49,10 @@ export const bashCommandTool: Tool = {
         const cmdParts = command.split(' ');
         if (allowedCmd === 'rm -rf') {
           return cmdParts.length >= 2 && cmdParts[0] === 'rm' && cmdParts[1] === '-rf';
+        }
+        if (allowedCmd.startsWith('npm ')) {
+          const npmSubcommand = allowedCmd.split(' ')[1];
+          return cmdParts.length >= 2 && cmdParts[0] === 'npm' && cmdParts[1] === npmSubcommand;
         }
         return cmdParts[0] === allowedCmd;
       });

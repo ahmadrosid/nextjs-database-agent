@@ -65,7 +65,6 @@ export class CoreAgent extends EventEmitter {
             this.thinkingOutput = ''; // Clear after emitting
           }
           
-          logger.debug('CoreAgent', 'emitting executing_tools progress', { message: `Executing ${toolName}` });
           this.emitProgress({
             type: 'executing_tools',
             message: `Executing ${toolName}`,

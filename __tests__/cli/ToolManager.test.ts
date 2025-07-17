@@ -20,13 +20,13 @@ jest.mock('../../lib/agent/core/tools/bashCommand', () => {
   return {
     bashCommandTool: {
       name: 'bash_command',
-      description: 'Execute allowed bash commands for file operations (mkdir, mv, rm -rf only)',
+      description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, rm -rf, npm commands)',
       parameters: {
         type: 'object',
         properties: {
           command: {
             type: 'string',
-            description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf',
+            description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf, npm install, npm run, npm start, npm test, npm build',
             required: true
           }
         },
@@ -41,11 +41,15 @@ jest.mock('../../lib/agent/core/tools/bashCommand', () => {
         const command = params.command.trim();
         
         // Validate command against allowlist
-        const allowedCommands = ['mkdir', 'mv', 'rm -rf'];
+        const allowedCommands = ['mkdir', 'mv', 'rm -rf', 'npm install', 'npm run', 'npm start', 'npm test', 'npm build'];
         const isAllowed = allowedCommands.some(allowedCmd => {
           const cmdParts = command.split(' ');
           if (allowedCmd === 'rm -rf') {
             return cmdParts.length >= 2 && cmdParts[0] === 'rm' && cmdParts[1] === '-rf';
+          }
+          if (allowedCmd.startsWith('npm ')) {
+            const npmSubcommand = allowedCmd.split(' ')[1];
+            return cmdParts.length >= 2 && cmdParts[0] === 'npm' && cmdParts[1] === npmSubcommand;
           }
           return cmdParts[0] === allowedCmd;
         });
@@ -436,7 +440,7 @@ describe('ToolManager', () => {
 
       expect(result.name).toBe('bash_command');
       expect(result.result).toContain('Error: Command not allowed');
-      expect(result.result).toContain('mkdir, mv, rm -rf');
+      expect(result.result).toContain('mkdir, mv, rm -rf, npm install, npm run, npm start, npm test, npm build');
       expect(result.error).toBeUndefined();
     });
 
@@ -551,6 +555,68 @@ describe('ToolManager', () => {
         timeout: 30000,
         env: process.env
       });
+    });
+
+    it('should execute npm install command successfully', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: 'Packages installed', stderr: '' });
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'npm install' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: npm install');
+      expect(result.result).toContain('Output: Packages installed');
+    });
+
+    it('should execute npm run command successfully', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: 'Script executed', stderr: '' });
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'npm run build' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: npm run build');
+      expect(result.result).toContain('Output: Script executed');
+    });
+
+    it('should execute npm test command successfully', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: 'Tests passed', stderr: '' });
+
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'npm test' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Command executed successfully: npm test');
+      expect(result.result).toContain('Output: Tests passed');
+    });
+
+    it('should reject npm commands with invalid subcommands', async () => {
+      const toolCall: ToolCall = {
+        name: 'bash_command',
+        parameters: { command: 'npm publish' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('bash_command');
+      expect(result.result).toContain('Error: Command not allowed');
+      expect(result.result).toContain('npm install, npm run, npm start, npm test, npm build');
+      expect(result.error).toBeUndefined();
     });
   });
 });
