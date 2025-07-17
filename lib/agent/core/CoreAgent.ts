@@ -23,7 +23,7 @@ export class CoreAgent extends EventEmitter {
       // Emit thinking event
       this.emitProgress({
         type: 'thinking',
-        message: 'Processing your query...',
+        message: 'Thinking about your query...',
         timestamp: new Date(),
       });
 
@@ -34,13 +34,19 @@ export class CoreAgent extends EventEmitter {
         timestamp: new Date(),
       });
 
-      // Generate response using LLM
-      const response = await this.llmService.generateResponse(query);
+      // Generate response using LLM with thinking callback
+      const response = await this.llmService.generateResponse(query, (thinkingContent) => {
+        this.emitProgress({
+          type: 'thinking',
+          message: thinkingContent,
+          timestamp: new Date(),
+        });
+      });
 
       // Emit generating event
       this.emitProgress({
         type: 'generating',
-        message: 'Generating response...',
+        message: 'Finalizing response...',
         timestamp: new Date(),
       });
 

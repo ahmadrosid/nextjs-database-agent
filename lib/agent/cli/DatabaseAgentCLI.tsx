@@ -24,18 +24,37 @@ const DatabaseAgentApp: React.FC = () => {
     },
   ]);
   const [coreAgent] = useState(() => new CoreAgent());
+  const [currentStatus, setCurrentStatus] = useState<string>('');
+  const [animationFrame, setAnimationFrame] = useState<number>(0);
+
+  // Animation for status display
+  useEffect(() => {
+    if (!currentStatus) return;
+
+    const interval = setInterval(() => {
+      setAnimationFrame(prev => (prev + 1) % 4);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [currentStatus]);
 
   // Listen to progress events from CoreAgent
   useEffect(() => {
     const handleProgress = (event: ProgressEvent) => {
-      const progressMessage: OutputMessage = {
-        id: `progress-${Date.now()}`,
-        type: 'progress',
-        content: event.message,
-        timestamp: event.timestamp,
-        progressType: event.type,
-      };
-      setMessages(prev => [...prev, progressMessage]);
+      // Update current status for display with short messages
+      if (event.type === 'complete' || event.type === 'error') {
+        setCurrentStatus('');
+        setAnimationFrame(0);
+      } else {
+        const statusMap = {
+          thinking: 'Thinking',
+          analyzing: 'Analyzing',
+          generating: 'Generating'
+        };
+        setCurrentStatus(statusMap[event.type] || event.type);
+      }
+
+      // Don't add progress messages to history - only show in status area
     };
 
     coreAgent.on('progress', handleProgress);
@@ -100,6 +119,13 @@ const DatabaseAgentApp: React.FC = () => {
           </Box>
         ))}
       </Box>
+
+      {/* Status Area - between output and input */}
+      {currentStatus && (
+        <Text color="yellow">
+          ⚡ {currentStatus}{'.'.repeat(animationFrame)}
+        </Text>
+      )}
 
       {/* Input Area - always at bottom */}
       <Box borderStyle="round" borderColor="gray" paddingX={1} flexShrink={0}>
