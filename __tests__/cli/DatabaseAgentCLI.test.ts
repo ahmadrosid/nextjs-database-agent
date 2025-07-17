@@ -1,10 +1,27 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { DatabaseAgentCLI } from '../../lib/agent/cli/DatabaseAgentCLI';
 
 // Mock globby to avoid ES module issues
 jest.mock('globby', () => ({
   globby: jest.fn().mockResolvedValue([])
 }));
+
+// Mock chalk to avoid dependency issues
+jest.mock('chalk', () => {
+  const chalk = jest.fn((text) => text);
+  chalk.blue = jest.fn((text) => text);
+  chalk.green = jest.fn((text) => text);
+  chalk.red = jest.fn((text) => text);
+  chalk.yellow = jest.fn((text) => text);
+  chalk.gray = jest.fn((text) => text);
+  chalk.dim = { gray: { strikethrough: jest.fn((text) => text) } };
+  chalk.bold = jest.fn((text) => text);
+  chalk.italic = jest.fn((text) => text);
+  chalk.underline = jest.fn((text) => text);
+  chalk.reset = jest.fn((text) => text);
+  return chalk;
+});
+
+import { DatabaseAgentCLI } from '../../lib/agent/cli/DatabaseAgentCLI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -12,15 +29,6 @@ jest.mock('ink', () => ({
   Box: jest.fn(({ children }) => children),
   Text: jest.fn(({ children }) => children),
   useInput: jest.fn(),
-}));
-
-// Mock chalk
-jest.mock('chalk', () => ({
-  blue: jest.fn((text: string) => text),
-  green: jest.fn((text: string) => text),
-  yellow: jest.fn((text: string) => text),
-  cyan: jest.fn((text: string) => text),
-  gray: jest.fn((text: string) => text),
 }));
 
 // Mock ink-text-input

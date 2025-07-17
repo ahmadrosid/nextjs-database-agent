@@ -39,6 +39,13 @@ export class CoreAgent extends EventEmitter {
       // Generate response using LLM with tools
       const response = await this.llmService.generateResponse(
         query, 
+        (content: string) => {
+          this.emitProgress({
+            type: 'thinking',
+            message: content,
+            timestamp: new Date(),
+          });
+        },
         this.toolManager,
         (toolName) => {
           this.emitProgress({

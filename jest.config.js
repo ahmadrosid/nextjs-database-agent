@@ -4,6 +4,7 @@ const config = {
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^marked-terminal$': '<rootDir>/__mocks__/marked-terminal.js',
   },
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -21,7 +22,7 @@ const config = {
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chalk|ink|ink-text-input|globby)/)'
+    'node_modules/(?!(chalk|ink|ink-text-input|globby|emojilib|node-emoji|marked-terminal)/)'
   ],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [

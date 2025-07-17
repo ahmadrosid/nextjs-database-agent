@@ -73,6 +73,15 @@ Before using any tool, consider:
 3. **Type Safety**: Ensure end-to-end type safety from database to UI
 4. **File Organization**: Maintain clean, scalable project structure
 
+## Thinking Process Guidelines
+
+When encountering complex problems:
+1. **Think First**: Use "think" to trigger extended thinking for deeper analysis
+2. **Plan Before Acting**: Research and plan your approach before implementing
+3. **Reflect After Tool Use**: Carefully analyze tool outputs before proceeding
+4. **Break Down Complex Tasks**: Divide complex instructions into actionable steps
+5. **Verify Information**: Check if all necessary information has been collected
+
 ## Workflow Approach
 
 When helping users, follow this methodology:
@@ -104,10 +113,19 @@ Remember: You're here to build robust, type-safe, and performant Next.js applica
 
   async generateResponse(
     query: string, 
+    onThinking?: (content: string) => void,
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void
   ): Promise<string> {
     try {
+      // Check if query contains thinking triggers
+      const needsExtendedThinking = this.shouldUseExtendedThinking(query);
+      
+      // Trigger thinking callback if extended thinking is needed
+      if (needsExtendedThinking && onThinking) {
+        onThinking('Analyzing query and planning approach...');
+      }
+      
       // Build messages for the conversation
       const messages: Anthropic.Messages.MessageParam[] = [
         {
@@ -212,5 +230,24 @@ Remember: You're here to build robust, type-safe, and performant Next.js applica
     );
 
     return textContent?.text || 'I was unable to generate a final response.';
+  }
+
+  private shouldUseExtendedThinking(query: string): boolean {
+    // Check for Claude 4 thinking triggers
+    const thinkingTriggers = ['think', 'think hard', 'think harder', 'ultrathink'];
+    const queryLower = query.toLowerCase();
+    
+    // Check for explicit thinking triggers
+    if (thinkingTriggers.some(trigger => queryLower.includes(trigger))) {
+      return true;
+    }
+    
+    // Check for complex problem indicators
+    const complexityIndicators = [
+      'complex', 'analyze', 'plan', 'strategy', 'approach', 'design',
+      'architecture', 'optimize', 'refactor', 'migrate', 'implement'
+    ];
+    
+    return complexityIndicators.some(indicator => queryLower.includes(indicator));
   }
 }
