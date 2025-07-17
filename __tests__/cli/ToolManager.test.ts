@@ -2,7 +2,7 @@ import { ToolManager } from '../../lib/agent/core/tools/index';
 import { ToolCall, ToolResult } from '../../lib/agent/types/index';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { resolve } from 'path';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { bashCommandTool } from '../../lib/agent/core/tools/bashCommand';
 
@@ -11,6 +11,10 @@ jest.mock('fs/promises');
 jest.mock('globby', () => ({
   globby: jest.fn()
 }));
+jest.mock('@vscode/ripgrep', () => ({
+  rgPath: '/mock/path/to/rg'
+}));
+jest.mock('child_process');
 
 // Create a global mock that we can reference in tests
 let globalMockExecAsync: jest.Mock;
@@ -103,6 +107,7 @@ const mockReadFile = jest.mocked(readFile);
 const mockWriteFile = jest.mocked(writeFile);
 const mockMkdir = jest.mocked(mkdir);
 const mockExec = jest.mocked(exec);
+const mockSpawn = jest.mocked(spawn);
 const mockPromisify = jest.mocked(promisify);
 const mockGlobby = require('globby').globby;
 
@@ -126,11 +131,12 @@ describe('ToolManager', () => {
     it('should register all tools by default', () => {
       const availableTools = toolManager.getAvailableTools();
       
-      expect(availableTools).toHaveLength(4);
+      expect(availableTools).toHaveLength(5);
       expect(availableTools.map(tool => tool.name)).toContain('list_files');
       expect(availableTools.map(tool => tool.name)).toContain('read_file');
       expect(availableTools.map(tool => tool.name)).toContain('write_file');
       expect(availableTools.map(tool => tool.name)).toContain('bash_command');
+      expect(availableTools.map(tool => tool.name)).toContain('search_files');
     });
 
     it('should provide tool descriptions for LLM', () => {
@@ -140,6 +146,7 @@ describe('ToolManager', () => {
       expect(toolsDescription).toContain('read_file');
       expect(toolsDescription).toContain('write_file');
       expect(toolsDescription).toContain('bash_command');
+      expect(toolsDescription).toContain('search_files');
       expect(toolsDescription).toContain('Description:');
       expect(toolsDescription).toContain('Parameters:');
     });
@@ -617,6 +624,171 @@ describe('ToolManager', () => {
       expect(result.result).toContain('Error: Command not allowed');
       expect(result.result).toContain('npm install, npm run, npm start, npm test, npm build');
       expect(result.error).toBeUndefined();
+    });
+  });
+
+  describe('Search Files Tool', () => {
+    let mockSpawnInstance: any;
+
+    beforeEach(() => {
+      mockSpawnInstance = {
+        stdout: { on: jest.fn() },
+        stderr: { on: jest.fn() },
+        on: jest.fn(),
+        kill: jest.fn()
+      };
+      mockSpawn.mockReturnValue(mockSpawnInstance);
+    });
+
+    it('should execute search_files tool successfully', async () => {
+      const searchResults = 'file1.ts:5:const searchTerm = "test";\nfile2.ts:10:// searchTerm usage';
+      
+      // Mock spawn behavior
+      mockSpawn.mockImplementation(() => {
+        const spawnInstance = {
+          stdout: { on: jest.fn() },
+          stderr: { on: jest.fn() },
+          on: jest.fn(),
+          kill: jest.fn()
+        };
+        
+        // Simulate successful execution
+        setTimeout(() => {
+          const stdoutCallback = spawnInstance.stdout.on.mock.calls.find(call => call[0] === 'data')?.[1];
+          if (stdoutCallback) stdoutCallback(searchResults);
+          
+          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
+          if (closeCallback) closeCallback(0); // Exit code 0 = success
+        }, 0);
+        
+        return spawnInstance;
+      });
+
+      const toolCall: ToolCall = {
+        name: 'search_files',
+        parameters: { query: 'searchTerm' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('search_files');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('Search results for "searchTerm"');
+      expect(result.result).toContain('file1.ts:5');
+    });
+
+    it('should handle search_files with no matches', async () => {
+      mockSpawn.mockImplementation(() => {
+        const spawnInstance = {
+          stdout: { on: jest.fn() },
+          stderr: { on: jest.fn() },
+          on: jest.fn(),
+          kill: jest.fn()
+        };
+        
+        setTimeout(() => {
+          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
+          if (closeCallback) closeCallback(1); // Exit code 1 = no matches
+        }, 0);
+        
+        return spawnInstance;
+      });
+
+      const toolCall: ToolCall = {
+        name: 'search_files',
+        parameters: { query: 'nonexistent' }
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('search_files');
+      expect(result.error).toBeUndefined();
+      expect(result.result).toContain('No matches found for "nonexistent"');
+    });
+
+    it('should handle search_files with file pattern', async () => {
+      mockSpawn.mockImplementation(() => {
+        const spawnInstance = {
+          stdout: { on: jest.fn() },
+          stderr: { on: jest.fn() },
+          on: jest.fn(),
+          kill: jest.fn()
+        };
+        
+        setTimeout(() => {
+          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
+          if (closeCallback) closeCallback(1);
+        }, 0);
+        
+        return spawnInstance;
+      });
+
+      const toolCall: ToolCall = {
+        name: 'search_files',
+        parameters: { 
+          query: 'test',
+          filePattern: '*.ts'
+        }
+      };
+
+      await toolManager.executeTool(toolCall);
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        '/mock/path/to/rg',
+        expect.arrayContaining(['--glob', '*.ts'])
+      );
+    });
+
+    it('should handle missing query parameter', async () => {
+      const toolCall: ToolCall = {
+        name: 'search_files',
+        parameters: {} // Missing query
+      };
+
+      const result: ToolResult = await toolManager.executeTool(toolCall);
+
+      expect(result.name).toBe('search_files');
+      expect(result.result).toContain('Error: Search query is required');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should verify ripgrep arguments are correct', async () => {
+      mockSpawn.mockImplementation(() => {
+        const spawnInstance = {
+          stdout: { on: jest.fn() },
+          stderr: { on: jest.fn() },
+          on: jest.fn(),
+          kill: jest.fn()
+        };
+        
+        setTimeout(() => {
+          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
+          if (closeCallback) closeCallback(1);
+        }, 0);
+        
+        return spawnInstance;
+      });
+
+      const toolCall: ToolCall = {
+        name: 'search_files',
+        parameters: { query: 'test' }
+      };
+
+      await toolManager.executeTool(toolCall);
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        '/mock/path/to/rg',
+        expect.arrayContaining([
+          '--color=never',
+          '--heading',
+          '--with-filename',
+          '--line-number',
+          '--ignore-case',
+          '--fixed-strings',
+          '--max-count=10',
+          'test'
+        ])
+      );
     });
   });
 });

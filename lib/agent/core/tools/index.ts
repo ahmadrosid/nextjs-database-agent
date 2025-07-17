@@ -2,6 +2,7 @@ import { listFilesTool } from './listFiles.js';
 import { readFileTool } from './readFile.js';
 import { writeFileTool } from './writeFile.js';
 import { bashCommandTool } from './bashCommand.js';
+import { searchFilesTool } from './searchFiles.js';
 import { Tool, ToolCall, ToolResult } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 
@@ -13,6 +14,7 @@ export class ToolManager {
     this.registerTool(readFileTool);
     this.registerTool(writeFileTool);
     this.registerTool(bashCommandTool);
+    this.registerTool(searchFilesTool);
   }
 
   registerTool(tool: Tool): void {
@@ -99,4 +101,4 @@ Parameters: ${JSON.stringify(tool.parameters, null, 2)}
 }
 
 export * from '../../types/index.js';
-export { listFilesTool, readFileTool, writeFileTool, bashCommandTool };
+export { listFilesTool, readFileTool, writeFileTool, bashCommandTool, searchFilesTool };
