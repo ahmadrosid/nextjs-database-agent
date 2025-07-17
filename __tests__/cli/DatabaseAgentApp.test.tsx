@@ -3,12 +3,26 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Mock Ink components
-jest.mock('ink', () => ({
-  render: jest.fn(),
-  Box: ({ children, ...props }: any) => React.createElement('div', props, children),
-  Text: ({ children, color, ...props }: any) => React.createElement('span', { ...props, 'data-color': color }, children),
-  useInput: jest.fn(),
-}));
+jest.mock('ink', () => {
+  const React = require('react');
+  return {
+    render: jest.fn(),
+    Box: ({ children, flexDirection, flexGrow, borderStyle, paddingX, paddingY, marginBottom, ...props }: any) => {
+      // Filter out Ink-specific props that don't exist on DOM elements
+      const domProps = Object.keys(props).reduce((acc, key) => {
+        // Only include standard DOM attributes
+        if (!key.startsWith('flex') && !key.startsWith('padding') && !key.startsWith('margin') && key !== 'borderStyle') {
+          acc[key] = props[key];
+        }
+        return acc;
+      }, {} as any);
+      
+      return React.createElement('div', domProps, children);
+    },
+    Text: ({ children, color, ...props }: any) => React.createElement('span', { ...props, 'data-color': color }, children),
+    useInput: jest.fn(),
+  };
+});
 
 // Mock chalk
 jest.mock('chalk', () => ({

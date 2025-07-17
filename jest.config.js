@@ -2,10 +2,10 @@
 const config = {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: [
     '**/__tests__/**/*.test.(ts|tsx|js)',
@@ -20,6 +20,9 @@ const config = {
       }
     }]
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(chalk|ink|ink-text-input)/)'
+  ],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [
     'lib/**/*.{ts,tsx}',
