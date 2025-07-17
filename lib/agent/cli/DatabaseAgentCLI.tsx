@@ -62,9 +62,7 @@ const DatabaseAgentApp: React.FC = () => {
 
   // Listen to progress events from CoreAgent
   useEffect(() => {
-    const handleProgress = (event: ProgressEvent) => {
-      logger.debug('CLI', 'handleProgress received event', { type: event.type, message: event.message });
-      
+    const handleProgress = (event: ProgressEvent) => {      
       // Update current status for display with short messages
       if (event.type === 'complete' || event.type === 'error') {
         setCurrentStatus('');
@@ -85,6 +83,17 @@ const DatabaseAgentApp: React.FC = () => {
           };
           setMessages(prev => [...prev, thinkingMessage]);
         }
+      } else if (event.type === 'plan') {
+        // Add plan output to message history with special formatting
+        if (event.message.trim()) {
+          const planMessage: OutputMessage = {
+            id: Date.now().toString(),
+            type: 'agent',
+            content: `**📋 Implementation Plan:**\n\n${event.message}`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, planMessage]);
+        }
       } else {
         let newStatus: string;
         
@@ -100,8 +109,6 @@ const DatabaseAgentApp: React.FC = () => {
           };
           newStatus = statusMap[event.type] || event.type;
         }
-        
-        logger.debug('CLI', 'setting currentStatus', { newStatus });
         setCurrentStatus(newStatus);
       }
 
@@ -186,7 +193,7 @@ const DatabaseAgentApp: React.FC = () => {
           <Text color="yellow">
             ⚡ {currentStatus}
             {tokenUsage && (
-              <Text color="gray"> [{tokenUsage.inputTokens}→{tokenUsage.outputTokens} tokens]</Text>
+              <Text color="gray"> [{tokenUsage.inputTokens + tokenUsage.outputTokens} tokens]</Text>
             )}
           </Text>
         </Box>
@@ -194,7 +201,7 @@ const DatabaseAgentApp: React.FC = () => {
 
       {/* Input Area - always at bottom */}
       <Box borderStyle="round" borderColor="gray" paddingX={1} flexShrink={0}>
-        <Text color="yellow">Orchids: </Text>
+        <Text color="gray">Orchids: </Text>
         <TextInput
           value={input}
           onChange={setInput}

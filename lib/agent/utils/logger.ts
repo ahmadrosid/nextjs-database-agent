@@ -8,13 +8,12 @@ import { existsSync } from 'fs';
 dotenv.config();
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
 const logFilePath = resolve('logs/agent.log');
 
 // Create file logger for development and test
 let fileLogger: pino.Logger | null = null;
 
-if (isDevelopment || isTest) {
+if (isDevelopment) {
   // Ensure log directory exists
   const logDir = dirname(logFilePath);
   if (!existsSync(logDir)) {
@@ -41,22 +40,22 @@ if (isDevelopment || isTest) {
 
 export const logger = {
   debug: (component: string, message: string, data?: any) => {
-    if (fileLogger) {
+    if (fileLogger && isDevelopment) {
       fileLogger.debug({ component, ...data }, message);
     }
   },
   info: (component: string, message: string, data?: any) => {
-    if (fileLogger) {
+    if (fileLogger && isDevelopment) {
       fileLogger.info({ component, ...data }, message);
     }
   },
   warn: (component: string, message: string, data?: any) => {
-    if (fileLogger) {
+    if (fileLogger && isDevelopment) {
       fileLogger.warn({ component, ...data }, message);
     }
   },
   error: (component: string, message: string, data?: any) => {
-    if (fileLogger) {
+    if (fileLogger && isDevelopment) {
       fileLogger.error({ component, ...data }, message);
     }
   }
