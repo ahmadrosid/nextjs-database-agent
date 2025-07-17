@@ -1,5 +1,5 @@
 export interface ProgressEvent {
-  type: 'thinking' | 'analyzing' | 'generating' | 'complete' | 'error';
+  type: 'thinking' | 'analyzing' | 'generating' | 'executing_tools' | 'complete' | 'error';
   message: string;
   timestamp: Date;
   data?: any;

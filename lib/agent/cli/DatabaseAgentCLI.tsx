@@ -3,7 +3,7 @@ import { render, Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import chalk from 'chalk';
 import { CoreAgent } from '../core/CoreAgent.js';
-import { ProgressEvent } from '../core/types.js';
+import { ProgressEvent } from '../types/index.js';
 
 interface OutputMessage {
   id: string;
@@ -49,6 +49,7 @@ const DatabaseAgentApp: React.FC = () => {
         const statusMap = {
           thinking: 'Thinking',
           analyzing: 'Analyzing',
+          executing_tools: 'Executing tools',
           generating: 'Generating'
         };
         setCurrentStatus(statusMap[event.type] || event.type);
