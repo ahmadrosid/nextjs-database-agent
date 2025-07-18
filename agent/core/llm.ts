@@ -63,7 +63,8 @@ export class LLMService {
         messages,
         tools: tools.length > 0 ? tools.map(tool => ({
           ...tool,
-          cache_control: { type: "ephemeral" }
+          // Cache most frequently used tools: search_files, read_file, list_files
+          ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
         })) : undefined,
       }, {
         headers: {
@@ -238,7 +239,8 @@ export class LLMService {
       messages,
       tools: toolManager.getToolsForClaudeAPI().map(tool => ({
         ...tool,
-        cache_control: { type: "ephemeral" }
+        // Cache most frequently used tools: search_files, read_file, list_files
+        ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
       })),
     }, {
       headers: {
@@ -356,7 +358,8 @@ export class LLMService {
       messages,
       tools: toolManager.getToolsForClaudeAPI().map(tool => ({
         ...tool,
-        cache_control: { type: "ephemeral" }
+        // Cache most frequently used tools: search_files, read_file, list_files
+        ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
       })),
     }, {
       headers: {
@@ -375,6 +378,18 @@ export class LLMService {
     );
 
     return textContent?.text || 'I was unable to generate a final response.';
+  }
+
+  private shouldCacheTool(toolName: string): boolean {
+    // Cache the 3 most frequently used tools (max 4 cache blocks total: 1 system + 3 tools)
+    // Prioritize based on database agent usage patterns
+    const cachedTools = [
+      'search_files',  // Most important - finding code references
+      'read_file',     // Second most - reading file contents  
+      'list_files'     // Third most - exploring directory structure
+    ];
+    
+    return cachedTools.includes(toolName);
   }
 
   private shouldUseExtendedThinking(query: string): boolean {
