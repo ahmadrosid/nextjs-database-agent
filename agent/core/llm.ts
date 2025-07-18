@@ -26,8 +26,9 @@ export class LLMService {
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
     onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
-    onGenerating?: () => void
-  ): Promise<string> {
+    onGenerating?: () => void,
+    conversationHistory?: Anthropic.Messages.MessageParam[]
+  ): Promise<{ response: string; conversationHistory: Anthropic.Messages.MessageParam[] }> {
     try {
       // Check if query contains thinking triggers
       const needsExtendedThinking = this.shouldUseExtendedThinking(query);
@@ -38,18 +39,24 @@ export class LLMService {
       }
       
       // Build messages for the conversation
-      const messages: Anthropic.Messages.MessageParam[] = [
-        {
+      const messages: Anthropic.Messages.MessageParam[] = conversationHistory ? 
+        [...conversationHistory, {
           role: 'user',
           content: query
-        }
-      ];
+        }] : 
+        [{
+          role: 'user',
+          content: query
+        }];
+
+      // Track the complete conversation history including tool interactions
+      const completeHistory: Anthropic.Messages.MessageParam[] = [...messages];
 
       // Use native tool calling if tools are available
       const tools = toolManager ? toolManager.getToolsForClaudeAPI() : [];
       
-      // Use streaming for real-time token counting
-      const stream = this.client.messages.stream({
+      // Log the actual request being sent to Anthropic API
+      const requestPayload: Anthropic.MessageStreamParams = {
         model: this.model,
         max_tokens: 2048,
         system: [
@@ -65,7 +72,20 @@ export class LLMService {
           // Cache most frequently used tools: search_files, read_file, list_files
           ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
         })) : undefined,
-      }, {
+      };
+      
+      logger.debug('LLMService', 'Sending request to Anthropic API', {
+        model: requestPayload.model,
+        max_tokens: requestPayload.max_tokens,
+        systemPromptLength: this.systemPrompt.length,
+        messagesCount: messages.length,
+        messages: messages,
+        toolsCount: tools.length,
+        tools: tools.map(t => t.name)
+      });
+
+      // Use streaming for real-time token counting
+      const stream = this.client.messages.stream(requestPayload, {
         headers: {
           "anthropic-beta": "prompt-caching-2024-07-31"
         }
@@ -142,10 +162,43 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
+        const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
+        
+        // Build complete conversation history with tool interactions
+        const finalHistory = [...completeHistory];
+        
+        // Add assistant's tool_use blocks
+        finalHistory.push({
+          role: 'assistant',
+          content: toolUseContent
+        });
+        
+        // Add the tool results message that was added in handleToolUseFromStream
+        // The tool results are the last message added to the messages array
+        const toolResultsMessage = messages[messages.length - 1];
+        if (toolResultsMessage && toolResultsMessage.role === 'user') {
+          finalHistory.push(toolResultsMessage);
+        }
+        
+        // Add final assistant response
+        finalHistory.push({
+          role: 'assistant',
+          content: result
+        });
+        
+        return { response: result, conversationHistory: finalHistory };
       }
 
-      return fullResponse || 'I was unable to generate a response.';
+      // No tools used - just add the response to conversation history
+      const finalHistory: Anthropic.Messages.MessageParam[] = [...completeHistory, {
+        role: 'assistant' as const,
+        content: fullResponse || 'I was unable to generate a response.'
+      }];
+
+      return { 
+        response: fullResponse || 'I was unable to generate a response.',
+        conversationHistory: finalHistory
+      };
     } catch (error) {
       // Re-throw abort errors as-is to preserve the message
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Operation was cancelled')) {

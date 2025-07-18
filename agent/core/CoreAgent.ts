@@ -3,6 +3,7 @@ import { LLMService } from './llm.js';
 import { ProgressEvent, TokenUsage } from '../types/index.js';
 import { ToolManager } from './tools/index.js';
 import { logger } from '../utils/logger.js';
+import Anthropic from '@anthropic-ai/sdk';
 
 export class CoreAgent extends EventEmitter {
   private llmService: LLMService;
@@ -10,6 +11,7 @@ export class CoreAgent extends EventEmitter {
   private isProcessing = false;
   private thinkingOutput: string = '';
   private currentAbortController: AbortController | null = null;
+  private conversationHistory: Anthropic.Messages.MessageParam[] = [];
 
   constructor() {
     super();
@@ -41,8 +43,8 @@ export class CoreAgent extends EventEmitter {
         timestamp: new Date(),
       });
 
-      // Generate response using LLM with tools
-      const response = await this.llmService.generateResponse(
+      // Generate response using LLM with tools and conversation history (before current query)
+      const result = await this.llmService.generateResponse(
         query, 
         (content: string) => {
           // Capture thinking output
@@ -98,8 +100,11 @@ export class CoreAgent extends EventEmitter {
             message: 'Finalizing response...',
             timestamp: new Date(),
           });
-        }
+        },
+        [...this.conversationHistory] // Pass a copy of current history (before this query)
       );
+
+      const response = result.response;
 
       // Emit thinking output as message if it wasn't emitted before
       if (this.thinkingOutput.trim()) {
@@ -108,6 +113,14 @@ export class CoreAgent extends EventEmitter {
           message: this.thinkingOutput,
           timestamp: new Date(),
         });
+      }
+
+      // Update conversation history with the complete history from LLMService (includes tool interactions)
+      this.conversationHistory = result.conversationHistory;
+
+      // Keep conversation history manageable (limit to last 10 exchanges = 20 messages)
+      if (this.conversationHistory.length > 20) {
+        this.conversationHistory = this.conversationHistory.slice(-20);
       }
 
       this.emitProgress({
