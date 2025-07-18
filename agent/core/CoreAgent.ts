@@ -81,7 +81,16 @@ export class CoreAgent extends EventEmitter {
             tokenUsage,
           });
         },
-        this.currentAbortController.signal
+        this.currentAbortController.signal,
+        (toolName: string, result: string, isError?: boolean) => {
+          // Handle tool completion
+          this.emitProgress({
+            type: isError ? 'tool_execution_error' : 'tool_execution_complete',
+            message: isError ? `Error in ${toolName}: ${result.slice(0, 200)}${result.length > 200 ? '...' : ''}` : `${toolName} completed: ${result.slice(0, 200)}${result.length > 200 ? '...' : ''}`,
+            timestamp: new Date(),
+            data: { toolName, result, isError }
+          });
+        }
       );
 
       // Emit thinking output as message if it wasn't emitted before

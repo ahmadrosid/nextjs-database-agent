@@ -24,7 +24,8 @@ export class LLMService {
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
   ): Promise<string> {
     try {
       // Check if query contains thinking triggers
@@ -140,7 +141,7 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
+        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
       }
 
       return fullResponse || 'I was unable to generate a response.';
@@ -161,7 +162,8 @@ export class LLMService {
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
@@ -201,124 +203,12 @@ export class LLMService {
         // Execute the tool
         const toolResult = await toolManager.executeTool(toolCall, abortSignal);
         
-        toolResults.push({
-          tool_use_id: contentBlock.id,
-          type: 'tool_result',
-          content: toolResult.error ? `Error: ${toolResult.error}` : toolResult.result
-        });
-      }
-    }
-
-    // Add tool results to the conversation
-    messages.push({
-      role: 'user',
-      content: toolResults
-    });
-
-    // Check if operation was aborted before final response
-    if (abortSignal?.aborted) {
-      const abortError = new Error('Operation was cancelled');
-      abortError.name = 'AbortError';
-      throw abortError;
-    }
-
-    // Get Claude's final response
-    const finalResponse = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 2048,
-      system: [
-        {
-          type: "text",
-          text: this.systemPrompt,
-          cache_control: { type: "ephemeral" }
+        // Notify about tool completion
+        if (onToolComplete) {
+          const isError = !!toolResult.error;
+          const result = toolResult.error ? toolResult.error : toolResult.result;
+          onToolComplete(contentBlock.name, result, isError);
         }
-      ],
-      messages,
-      tools: toolManager.getToolsForClaudeAPI().map(tool => ({
-        ...tool,
-        // Cache most frequently used tools: search_files, read_file, list_files
-        ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
-      })),
-    }, {
-      headers: {
-        "anthropic-beta": "prompt-caching-2024-07-31"
-      }
-    });
-
-    // Handle potential additional tool calls recursively
-    if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
-    }
-
-    // Return the final text response
-    const textContent = finalResponse.content.find(
-      (content) => content.type === 'text'
-    );
-
-    return textContent?.text || 'I was unable to generate a final response.';
-  }
-
-  private formatToolParameters(toolName: string, parameters: any): string {
-    // Format tool parameters for display
-    switch (toolName) {
-      case 'list_files':
-        return parameters.path || '.';
-      case 'read_file':
-        return parameters.path || '';
-      case 'write_file':
-        return parameters.path || '';
-      case 'bash_command':
-        return parameters.command || '';
-      default:
-        return JSON.stringify(parameters).slice(0, 50) + '...';
-    }
-  }
-
-  private async handleToolUse(
-    response: Anthropic.Messages.Message,
-    messages: Anthropic.Messages.MessageParam[],
-    toolManager?: ToolManager,
-    onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
-    abortSignal?: AbortSignal
-  ): Promise<string> {
-    if (!toolManager) {
-      return 'Tools are not available for this request.';
-    }
-
-    // Add the assistant's response to the conversation
-    messages.push({
-      role: 'assistant',
-      content: response.content
-    });
-
-    // Process all tool calls
-    const toolResults: any[] = [];
-    
-    for (const contentBlock of response.content) {
-      // Check if operation was aborted
-      if (abortSignal?.aborted) {
-        const abortError = new Error('Operation was cancelled');
-        abortError.name = 'AbortError';
-        throw abortError;
-      }
-
-      if (contentBlock.type === 'tool_use') {
-        const toolCall = {
-          name: contentBlock.name,
-          parameters: contentBlock.input as Record<string, any>
-        };
-
-        // Notify about tool execution with detailed info
-        if (onToolExecution) {
-          const paramStr = this.formatToolParameters(contentBlock.name, contentBlock.input);
-          const toolCallStr = `${contentBlock.name}(${paramStr})`;
-          logger.debug('LLMService', 'handleToolUse calling onToolExecution', { toolCallStr });
-          onToolExecution(toolCallStr);
-        }
-
-        // Execute the tool
-        const toolResult = await toolManager.executeTool(toolCall, abortSignal);
         
         toolResults.push({
           tool_use_id: contentBlock.id,
@@ -366,7 +256,134 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
+    }
+
+    // Return the final text response
+    const textContent = finalResponse.content.find(
+      (content) => content.type === 'text'
+    );
+
+    return textContent?.text || 'I was unable to generate a final response.';
+  }
+
+  private formatToolParameters(toolName: string, parameters: any): string {
+    // Format tool parameters for display
+    switch (toolName) {
+      case 'list_files':
+        return parameters.path || '.';
+      case 'read_file':
+        return parameters.path || '';
+      case 'write_file':
+        return parameters.path || '';
+      case 'bash_command':
+        return parameters.command || '';
+      default:
+        return JSON.stringify(parameters).slice(0, 50) + '...';
+    }
+  }
+
+  private async handleToolUse(
+    response: Anthropic.Messages.Message,
+    messages: Anthropic.Messages.MessageParam[],
+    toolManager?: ToolManager,
+    onToolExecution?: (toolName: string) => void,
+    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
+    abortSignal?: AbortSignal,
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
+  ): Promise<string> {
+    if (!toolManager) {
+      return 'Tools are not available for this request.';
+    }
+
+    // Add the assistant's response to the conversation
+    messages.push({
+      role: 'assistant',
+      content: response.content
+    });
+
+    // Process all tool calls
+    const toolResults: any[] = [];
+    
+    for (const contentBlock of response.content) {
+      // Check if operation was aborted
+      if (abortSignal?.aborted) {
+        const abortError = new Error('Operation was cancelled');
+        abortError.name = 'AbortError';
+        throw abortError;
+      }
+
+      if (contentBlock.type === 'tool_use') {
+        const toolCall = {
+          name: contentBlock.name,
+          parameters: contentBlock.input as Record<string, any>
+        };
+
+        // Notify about tool execution with detailed info
+        if (onToolExecution) {
+          const paramStr = this.formatToolParameters(contentBlock.name, contentBlock.input);
+          const toolCallStr = `${contentBlock.name}(${paramStr})`;
+          logger.debug('LLMService', 'handleToolUse calling onToolExecution', { toolCallStr });
+          onToolExecution(toolCallStr);
+        }
+
+        // Execute the tool
+        const toolResult = await toolManager.executeTool(toolCall, abortSignal);
+        
+        // Notify about tool completion
+        if (onToolComplete) {
+          const isError = !!toolResult.error;
+          const result = toolResult.error ? toolResult.error : toolResult.result;
+          onToolComplete(contentBlock.name, result, isError);
+        }
+        
+        toolResults.push({
+          tool_use_id: contentBlock.id,
+          type: 'tool_result',
+          content: toolResult.error ? `Error: ${toolResult.error}` : toolResult.result
+        });
+      }
+    }
+
+    // Add tool results to the conversation
+    messages.push({
+      role: 'user',
+      content: toolResults
+    });
+
+    // Check if operation was aborted before final response
+    if (abortSignal?.aborted) {
+      const abortError = new Error('Operation was cancelled');
+      abortError.name = 'AbortError';
+      throw abortError;
+    }
+
+    // Get Claude's final response
+    const finalResponse = await this.client.messages.create({
+      model: this.model,
+      max_tokens: 2048,
+      system: [
+        {
+          type: "text",
+          text: this.systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
+      messages,
+      tools: toolManager.getToolsForClaudeAPI().map(tool => ({
+        ...tool,
+        // Cache most frequently used tools: search_files, read_file, list_files
+        ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
+      })),
+    }, {
+      headers: {
+        "anthropic-beta": "prompt-caching-2024-07-31"
+      }
+    });
+
+    // Handle potential additional tool calls recursively
+    if (finalResponse.stop_reason === 'tool_use') {
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
     }
 
     // Return the final text response

@@ -5,7 +5,7 @@ export interface TokenUsage {
 }
 
 export interface ProgressEvent {
-  type: 'thinking' | 'analyzing' | 'generating' | 'executing_tools' | 'complete' | 'error' | 'aborted' | 'token_update' | 'thinking_complete' | 'plan';
+  type: 'thinking' | 'analyzing' | 'generating' | 'executing_tools' | 'tool_execution_complete' | 'tool_execution_error' | 'complete' | 'error' | 'aborted' | 'token_update' | 'thinking_complete' | 'plan';
   message: string;
   timestamp: Date;
   data?: any;

@@ -9,25 +9,7 @@ import { markedTerminal } from 'marked-terminal';
 import { CoreAgent } from '../core/CoreAgent.js';
 import { ProgressEvent } from '../types/index.js';
 
-// Configure marked-terminal for better terminal rendering
-marked.setOptions({
-  renderer: markedTerminal({
-    code: chalk.yellow,
-    blockquote: chalk.gray.italic,
-    html: chalk.gray,
-    heading: chalk.green.bold,
-    hr: chalk.reset,
-    listitem: chalk.reset,
-    list: chalk.reset,
-    paragraph: chalk.reset,
-    strong: chalk.bold,
-    em: chalk.italic,
-    codespan: chalk.yellow,
-    del: chalk.dim.gray.strikethrough,
-    link: chalk.blue,
-    href: chalk.blue.underline,
-  }) as any,
-});
+marked.use(markedTerminal() as any);
 
 const formatMarkdown = (content: string): string => {
   try {
@@ -56,7 +38,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
     {
       id: '1',
       type: 'agent',
-      content: 'Database Agent started! Type your query below.',
+      content: '👋 Database Agent started! Type your query below.',
       timestamp: new Date(),
     },
   ]);
@@ -108,6 +90,32 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           };
           setMessages(prev => [...prev, planMessage]);
         }
+      } else if (event.type === 'tool_execution_complete') {
+        // Add tool result to message history
+        if (event.message.trim()) {
+          const toolResultMessage: OutputMessage = {
+            id: Date.now().toString(),
+            type: 'agent',
+            content: `✅ **Tool Result:** ${event.message}`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, toolResultMessage]);
+        }
+        // Clear the executing status
+        setCurrentStatus('Processing results...');
+      } else if (event.type === 'tool_execution_error') {
+        // Add tool error to message history
+        if (event.message.trim()) {
+          const toolErrorMessage: OutputMessage = {
+            id: Date.now().toString(),
+            type: 'agent',
+            content: `❌ **Tool Error:** ${event.message}`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, toolErrorMessage]);
+        }
+        // Clear the executing status
+        setCurrentStatus('Handling error...');
       } else {
         let newStatus: string;
         
@@ -263,8 +271,11 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         {messages.map((message) => (
           <Box key={message.id} marginBottom={1}>
             {message.type === 'agent' ? (
-              <Text>
-                <Text color="green">🤖 </Text>
+              <Text color={
+                message.content.startsWith('**Tool Result:**') || message.content.startsWith('**Tool Error:**') 
+                  ? 'gray' 
+                  : undefined
+              }>
                 {formatMarkdown(message.content)}
               </Text>
             ) : (
@@ -273,7 +284,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
                 message.type === 'progress' ? 'yellow' : 'green'
               }>
                 {message.type === 'user' ? '> ' :
-                 message.type === 'progress' ? '⚡ ' : '🤖 '}
+                 message.type === 'progress' ? '✻ ' : ''}
                 {message.content}
               </Text>
             )}
@@ -285,8 +296,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       {(currentStatus || instructionQueue.length > 0) && (
         <Box>
           {currentStatus && (
-            <Text color="yellow">
-              ⚡ {currentStatus}
+            <Text color="green">
+              ✻ {currentStatus}
               {tokenUsage && (
                 <Text color="gray"> [{tokenUsage.inputTokens + tokenUsage.outputTokens} tokens]</Text>
               )}
