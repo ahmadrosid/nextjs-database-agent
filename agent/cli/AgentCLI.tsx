@@ -21,9 +21,17 @@ const formatMarkdown = (content: string): string => {
   }
 };
 
+const trimToMaxLines = (content: string, maxLines: number = 3): string => {
+  const lines = content.split('\n');
+  if (lines.length <= maxLines) {
+    return content;
+  }
+  return lines.slice(0, maxLines).join('\n') + '...';
+};
+
 interface OutputMessage {
   id: string;
-  type: 'user' | 'agent' | 'progress';
+  type: 'user' | 'agent' | 'progress' | 'thinking' | 'toolResult' | 'toolError';
   content: string;
   timestamp: Date;
   progressType?: ProgressEvent['type'];
@@ -75,8 +83,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         if (event.message.trim()) {
           const thinkingMessage: OutputMessage = {
             id: Date.now().toString(),
-            type: 'agent',
-            content: `**Thinking:** ${event.message}`,
+            type: 'thinking',
+            content: event.message,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, thinkingMessage]);
@@ -97,8 +105,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         if (event.message.trim()) {
           const toolResultMessage: OutputMessage = {
             id: Date.now().toString(),
-            type: 'agent',
-            content: `**Tool Result:** ${event.message}`,
+            type: 'toolResult',
+            content: event.message,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, toolResultMessage]);
@@ -110,8 +118,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         if (event.message.trim()) {
           const toolErrorMessage: OutputMessage = {
             id: Date.now().toString(),
-            type: 'agent',
-            content: `**Tool Error:** ${event.message}`,
+            type: 'toolError',
+            content: event.message,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, toolErrorMessage]);
@@ -275,6 +283,24 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
               <Text color={'gray'} dimColor>
                 {formatMarkdown(message.content)}
               </Text>
+            ) : message.type === 'thinking' ? (
+              <Box marginBottom={1}>
+                <Text color="gray" dimColor>
+                  Thinking: {trimToMaxLines(message.content)}
+                </Text>
+              </Box>
+            ) : message.type === 'toolResult' ? (
+              <Box marginBottom={1}>
+                <Text color="gray" dimColor>
+                  Tool Result: {trimToMaxLines(message.content)}
+                </Text>
+              </Box>
+            ) : message.type === 'toolError' ? (
+              <Box marginBottom={1}>
+                <Text color="red" dimColor>
+                  Tool Error: {trimToMaxLines(message.content)}
+                </Text>
+              </Box>
             ) : (
               <Box marginBottom={1}>
                 <Text color={
