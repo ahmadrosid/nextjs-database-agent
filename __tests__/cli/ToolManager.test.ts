@@ -2,9 +2,8 @@ import { ToolManager } from '../../agent/core/tools/index';
 import { ToolCall, ToolResult } from '../../agent/types/index';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { resolve } from 'path';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
-import { bashCommandTool } from '../../agent/core/tools/bashCommand';
+import { spawn, ChildProcess } from 'child_process';
+import { EventEmitter } from 'events';
 
 // Mock fs/promises, globby, and child_process to avoid file system dependencies
 jest.mock('fs/promises');
@@ -106,9 +105,7 @@ jest.mock('../../agent/core/tools/bashCommand', () => {
 const mockReadFile = jest.mocked(readFile);
 const mockWriteFile = jest.mocked(writeFile);
 const mockMkdir = jest.mocked(mkdir);
-const mockExec = jest.mocked(exec);
 const mockSpawn = jest.mocked(spawn);
-const mockPromisify = jest.mocked(promisify);
 const mockGlobby = require('globby').globby;
 
 describe('ToolManager', () => {
@@ -629,16 +626,59 @@ describe('ToolManager', () => {
   });
 
   describe('Search Files Tool', () => {
-    let mockSpawnInstance: any;
+    const createMockChildProcess = (onCloseCallback?: (code: number) => void) => {
+      const mockStdout = new EventEmitter() as any;
+      const mockStderr = new EventEmitter() as any;
+      const mockStdin = new EventEmitter() as any;
+      const mockOn = jest.fn();
+      
+      if (onCloseCallback) {
+        mockOn.mockImplementation((event: string, callback: Function) => {
+          if (event === 'close') {
+            setTimeout(() => callback(onCloseCallback(0)), 0);
+          }
+        });
+      }
+      
+      return {
+        stdout: mockStdout,
+        stderr: mockStderr,
+        stdin: mockStdin,
+        on: mockOn,
+        kill: jest.fn(),
+        killed: false,
+        connected: false,
+        pid: 1234,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [],
+        spawnfile: '',
+        stdio: [mockStdin, mockStdout, mockStderr, null, null] as any,
+        ref: jest.fn(),
+        unref: jest.fn(),
+        send: jest.fn(),
+        disconnect: jest.fn(),
+        addListener: jest.fn(),
+        emit: jest.fn(),
+        eventNames: jest.fn(),
+        getMaxListeners: jest.fn(),
+        listenerCount: jest.fn(),
+        listeners: jest.fn(),
+        off: jest.fn(),
+        once: jest.fn(),
+        prependListener: jest.fn(),
+        prependOnceListener: jest.fn(),
+        rawListeners: jest.fn(),
+        removeAllListeners: jest.fn(),
+        removeListener: jest.fn(),
+        setMaxListeners: jest.fn(),
+        [Symbol.dispose]: jest.fn()
+      } as unknown as ChildProcess;
+    };
 
     beforeEach(() => {
-      mockSpawnInstance = {
-        stdout: { on: jest.fn() },
-        stderr: { on: jest.fn() },
-        on: jest.fn(),
-        kill: jest.fn()
-      };
-      mockSpawn.mockReturnValue(mockSpawnInstance);
+      // Default mock implementation
+      mockSpawn.mockReturnValue(createMockChildProcess());
     });
 
     it('should execute search_files tool successfully', async () => {
@@ -646,23 +686,23 @@ describe('ToolManager', () => {
       
       // Mock spawn behavior
       mockSpawn.mockImplementation(() => {
-        const spawnInstance = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn(),
-          kill: jest.fn()
-        };
+        const mockChildProcess = createMockChildProcess();
+        const mockStdout = mockChildProcess.stdout as EventEmitter;
+        const mockOn = mockChildProcess.on as jest.Mock;
+        
+        // Setup event handlers
+        mockOn.mockImplementation((event: string, callback: Function) => {
+          if (event === 'close') {
+            setTimeout(() => callback(0), 0); // Exit code 0 = success
+          }
+        });
         
         // Simulate successful execution
         setTimeout(() => {
-          const stdoutCallback = spawnInstance.stdout.on.mock.calls.find(call => call[0] === 'data')?.[1];
-          if (stdoutCallback) stdoutCallback(searchResults);
-          
-          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
-          if (closeCallback) closeCallback(0); // Exit code 0 = success
+          mockStdout.emit('data', searchResults);
         }, 0);
         
-        return spawnInstance;
+        return mockChildProcess;
       });
 
       const toolCall: ToolCall = {
@@ -680,19 +720,16 @@ describe('ToolManager', () => {
 
     it('should handle search_files with no matches', async () => {
       mockSpawn.mockImplementation(() => {
-        const spawnInstance = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn(),
-          kill: jest.fn()
-        };
+        const mockChildProcess = createMockChildProcess();
+        const mockOn = mockChildProcess.on as jest.Mock;
         
-        setTimeout(() => {
-          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
-          if (closeCallback) closeCallback(1); // Exit code 1 = no matches
-        }, 0);
+        mockOn.mockImplementation((event: string, callback: Function) => {
+          if (event === 'close') {
+            setTimeout(() => callback(1), 0); // Exit code 1 = no matches
+          }
+        });
         
-        return spawnInstance;
+        return mockChildProcess;
       });
 
       const toolCall: ToolCall = {
@@ -709,19 +746,16 @@ describe('ToolManager', () => {
 
     it('should handle search_files with file pattern', async () => {
       mockSpawn.mockImplementation(() => {
-        const spawnInstance = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn(),
-          kill: jest.fn()
-        };
+        const mockChildProcess = createMockChildProcess();
+        const mockOn = mockChildProcess.on as jest.Mock;
         
-        setTimeout(() => {
-          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
-          if (closeCallback) closeCallback(1);
-        }, 0);
+        mockOn.mockImplementation((event: string, callback: Function) => {
+          if (event === 'close') {
+            setTimeout(() => callback(1), 0);
+          }
+        });
         
-        return spawnInstance;
+        return mockChildProcess;
       });
 
       const toolCall: ToolCall = {
@@ -755,19 +789,16 @@ describe('ToolManager', () => {
 
     it('should verify ripgrep arguments are correct', async () => {
       mockSpawn.mockImplementation(() => {
-        const spawnInstance = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn(),
-          kill: jest.fn()
-        };
+        const mockChildProcess = createMockChildProcess();
+        const mockOn = mockChildProcess.on as jest.Mock;
         
-        setTimeout(() => {
-          const closeCallback = spawnInstance.on.mock.calls.find(call => call[0] === 'close')?.[1];
-          if (closeCallback) closeCallback(1);
-        }, 0);
+        mockOn.mockImplementation((event: string, callback: Function) => {
+          if (event === 'close') {
+            setTimeout(() => callback(1), 0);
+          }
+        });
         
-        return spawnInstance;
+        return mockChildProcess;
       });
 
       const toolCall: ToolCall = {
