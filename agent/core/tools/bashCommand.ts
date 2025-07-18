@@ -7,7 +7,7 @@ const execAsync = promisify(exec);
 
 export const bashCommandTool: Tool = {
   name: 'bash_command',
-  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, rm -rf, npm commands)',
+  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, rm -rf, npm commands). IMPORTANT: Always use --legacy-peer-deps flag with npm install commands to avoid peer dependency conflicts.',
   parameters: {
     type: 'object',
     properties: {
