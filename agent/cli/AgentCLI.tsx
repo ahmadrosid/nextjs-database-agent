@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';

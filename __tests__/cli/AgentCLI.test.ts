@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { AgentCLI } from '../../agent/cli/DatabaseAgentCLI';
+import { AgentCLI } from '../../agent/cli/AgentCLI';
 
 // Mock Ink components
 jest.mock('ink', () => ({

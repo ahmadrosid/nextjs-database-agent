@@ -1,11 +1,8 @@
+
 import pino from 'pino';
-import dotenv from 'dotenv';
 import { mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import { existsSync } from 'fs';
-
-// Load environment variables
-dotenv.config();
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const logFilePath = resolve('logs/agent.log');
