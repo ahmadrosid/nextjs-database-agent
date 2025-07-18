@@ -11,9 +11,10 @@ program
 program
   .command('start')
   .description('Start the interactive database agent')
-  .action(() => {
+  .argument('[prompt]', 'Initial prompt to process')
+  .action((prompt?: string) => {
     const cli = new DatabaseAgentCLI();
-    cli.start();
+    cli.start(prompt);
   });
 
 program.parse();

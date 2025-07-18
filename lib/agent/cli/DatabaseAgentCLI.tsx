@@ -45,7 +45,11 @@ interface OutputMessage {
   progressType?: ProgressEvent['type'];
 }
 
-const DatabaseAgentApp: React.FC = () => {
+interface DatabaseAgentAppProps {
+  initialPrompt?: string;
+}
+
+const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<OutputMessage[]>([
     {
@@ -59,6 +63,13 @@ const DatabaseAgentApp: React.FC = () => {
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [tokenUsage, setTokenUsage] = useState<{ inputTokens: number; outputTokens: number; totalTokens: number } | null>(null);
 
+
+  // Process initial prompt if provided
+  useEffect(() => {
+    if (initialPrompt) {
+      handleSubmit(initialPrompt);
+    }
+  }, [initialPrompt]);
 
   // Listen to progress events from CoreAgent
   useEffect(() => {
@@ -224,9 +235,8 @@ const DatabaseAgentApp: React.FC = () => {
 };
 
 export class DatabaseAgentCLI {
-  start() {
-    logger.info('CLI', 'Starting Database Agent CLI');
-    console.log(chalk.blue('Starting Database Agent CLI...'));
-    render(<DatabaseAgentApp />);
+  start(initialPrompt?: string) {
+    console.log(chalk.gray('Starting Database Agent CLI...'));
+    render(<DatabaseAgentApp initialPrompt={initialPrompt} />);
   }
 }
