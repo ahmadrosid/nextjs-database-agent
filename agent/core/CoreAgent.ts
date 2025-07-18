@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
 import { LLMService } from './llm.js';
-import { ProgressEvent, TokenUsage } from '../types/index.js';
+import { ProgressEvent } from '../types/index.js';
 import { ToolManager } from './tools/index.js';
 import { logger } from '../utils/logger.js';
 import Anthropic from '@anthropic-ai/sdk';
@@ -75,20 +75,13 @@ export class CoreAgent extends EventEmitter {
             timestamp: new Date(),
           });
         },
-        (tokenUsage: TokenUsage) => {
-          this.emitProgress({
-            type: 'token_update',
-            message: `Tokens: ${tokenUsage.inputTokens}→${tokenUsage.outputTokens} (${tokenUsage.totalTokens})`,
-            timestamp: new Date(),
-            tokenUsage,
-          });
-        },
         this.currentAbortController.signal,
         (toolName: string, result: string, isError?: boolean) => {
           // Handle tool completion
+          const safeResult = result || '';
           this.emitProgress({
             type: isError ? 'tool_execution_error' : 'tool_execution_complete',
-            message: isError ? `Error in ${toolName}: ${result.slice(0, 200)}${result.length > 200 ? '...' : ''}` : `${toolName} completed: ${result.slice(0, 200)}${result.length > 200 ? '...' : ''}`,
+            message: isError ? `Error in ${toolName}: ${safeResult.slice(0, 200)}${safeResult.length > 200 ? '...' : ''}` : `${toolName} completed: ${safeResult.slice(0, 200)}${safeResult.length > 200 ? '...' : ''}`,
             timestamp: new Date(),
             data: { toolName, result, isError }
           });

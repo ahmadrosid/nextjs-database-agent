@@ -87,7 +87,6 @@ describe('LLMService Tool History Integration', () => {
         undefined, // onThinking
         mockToolManager as any,
         mockOnToolExecution,
-        undefined, // onTokenUpdate
         undefined, // abortSignal
         mockOnToolComplete,
         undefined, // onGenerating

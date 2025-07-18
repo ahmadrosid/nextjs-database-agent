@@ -1,6 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ToolManager } from './tools/index.js';
-import { TokenUsage } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { SYSTEM_PROMPT } from '../prompts/systemPrompt.js';
 
@@ -23,7 +22,6 @@ export class LLMService {
     onThinking?: (content: string) => void,
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
     onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
     onGenerating?: () => void,
@@ -92,8 +90,6 @@ export class LLMService {
       });
 
       let fullResponse = '';
-      let inputTokens = 0;
-      let outputTokens = 0;
       let toolUseContent: any[] = [];
       
       // Process the stream
@@ -105,29 +101,7 @@ export class LLMService {
           throw abortError;
         }
         
-        if (chunk.type === 'message_start') {
-          // Get input tokens from message start
-          inputTokens = chunk.message.usage.input_tokens;
-          if (onTokenUpdate) {
-            onTokenUpdate({
-              inputTokens,
-              outputTokens: 0,
-              totalTokens: inputTokens
-            });
-          }
-        } else if (chunk.type === 'message_delta') {
-          // Update output tokens from message delta
-          if (chunk.usage) {
-            outputTokens = chunk.usage.output_tokens;
-            if (onTokenUpdate) {
-              onTokenUpdate({
-                inputTokens,
-                outputTokens,
-                totalTokens: inputTokens + outputTokens
-              });
-            }
-          }
-        } else if (chunk.type === 'content_block_start') {
+ else if (chunk.type === 'content_block_start') {
           if (chunk.content_block.type === 'tool_use') {
             toolUseContent.push(chunk.content_block);
           }
@@ -162,7 +136,7 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
+        const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
         
         // Build complete conversation history with tool interactions
         const finalHistory = [...completeHistory];
@@ -215,7 +189,6 @@ export class LLMService {
     messages: Anthropic.Messages.MessageParam[],
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
     onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
     onGenerating?: () => void
@@ -316,7 +289,7 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
     }
 
     // Return the final text response
@@ -348,7 +321,6 @@ export class LLMService {
     messages: Anthropic.Messages.MessageParam[],
     toolManager?: ToolManager,
     onToolExecution?: (toolName: string) => void,
-    onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
     onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
     onGenerating?: () => void
@@ -449,7 +421,7 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
     }
 
     // Return the final text response

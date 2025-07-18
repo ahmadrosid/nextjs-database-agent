@@ -28,7 +28,7 @@ describe('Tool Interaction History', () => {
     it('should capture tool_use and tool_result blocks in conversation history', async () => {
       // Mock the first query that uses tools
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // This should trigger tool use internally
           return {
             response: 'Based on package.json, this project uses React 19',
@@ -42,7 +42,7 @@ describe('Tool Interaction History', () => {
 
       // Mock the second query 
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // We want to verify that conversationHistory contains the complete tool interaction cycle
           return {
             response: 'I already checked that file in my previous response',
@@ -61,7 +61,7 @@ describe('Tool Interaction History', () => {
 
       // Get the conversation history passed to the second query
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8]; // 9th parameter (0-indexed)
+      const conversationHistory = secondCall[7]; // 8th parameter (0-indexed)
 
       // This test will initially fail because we haven't implemented the feature yet
       // But it clearly defines what we want to achieve
@@ -136,7 +136,7 @@ describe('Tool Interaction History', () => {
 
       // Third query: Should have access to both previous tool interactions
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           return {
             response: 'Based on my previous searches, this is a React 19 TypeScript project',
             conversationHistory: [
@@ -157,7 +157,7 @@ describe('Tool Interaction History', () => {
 
       // Get conversation history for the third query
       const thirdCall = mockLLMService.generateResponse.mock.calls[2];
-      const conversationHistory = thirdCall[8];
+      const conversationHistory = thirdCall[7];
 
       // Verify current behavior (will be updated after implementation)
       expect(conversationHistory).toEqual([
@@ -186,7 +186,7 @@ describe('Tool Interaction History', () => {
       );
 
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           return {
             response: 'I already tried to read that file but it does not exist',
             conversationHistory: [
@@ -203,7 +203,7 @@ describe('Tool Interaction History', () => {
       await coreAgent.processQuery('Try reading nonexistent.json again');
 
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8];
+      const conversationHistory = secondCall[7];
 
       // Current behavior
       expect(conversationHistory).toEqual([
@@ -240,7 +240,7 @@ describe('Tool Interaction History', () => {
 
       // Check that history is properly limited
       const lastCall = mockLLMService.generateResponse.mock.calls[14];
-      const conversationHistory = lastCall[8];
+      const conversationHistory = lastCall[7];
 
       expect(conversationHistory).toBeDefined();
       expect(conversationHistory).toHaveLength(20); // Should still respect the 20 message limit
@@ -255,7 +255,7 @@ describe('Tool Interaction History', () => {
       
       // Mock a realistic tool execution scenario
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // Simulate real tool execution flow
           if (_onToolExecution) {
             _onToolExecution('read_file(package.json)');
@@ -284,7 +284,6 @@ describe('Tool Interaction History', () => {
         expect.any(Function), // onThinking
         expect.any(Object),   // toolManager
         expect.any(Function), // onToolExecution
-        expect.any(Function), // onTokenUpdate
         expect.any(Object),   // abortSignal
         expect.any(Function), // onToolComplete
         expect.any(Function), // onGenerating

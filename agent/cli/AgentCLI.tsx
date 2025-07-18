@@ -53,7 +53,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
   ]);
   const [coreAgent] = useState(() => new CoreAgent());
   const [currentStatus, setCurrentStatus] = useState<string>('');
-  const [tokenUsage, setTokenUsage] = useState<{ inputTokens: number; outputTokens: number; totalTokens: number } | null>(null);
+  const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [instructionQueue, setInstructionQueue] = useState<string[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
@@ -72,12 +73,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       // Update current status for display with short messages
       if (event.type === 'complete' || event.type === 'error' || event.type === 'aborted') {
         setCurrentStatus('');
-        setTokenUsage(null);
-      } else if (event.type === 'token_update') {
-        // Update token usage without changing status
-        if (event.tokenUsage) {
-          setTokenUsage(event.tokenUsage);
-        }
+        setProcessingStartTime(null);
+        setElapsedTime(0);
       } else if (event.type === 'thinking_complete') {
         // Add thinking output to message history
         if (event.message.trim()) {
@@ -134,7 +131,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           newStatus = event.message;
         } else {
           // Use status map for other events
-          const statusMap = {
+          const statusMap: { [key: string]: string } = {
             thinking: 'Thinking...',
             analyzing: 'Analyzing...',
             generating: 'Generating...'
@@ -143,6 +140,11 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         }
         logger.debug("AgentCLI", "newStatus", {newStatus});
         setCurrentStatus(newStatus);
+        
+        // Start timer when processing begins
+        if (!processingStartTime && (event.type === 'thinking' || event.type === 'analyzing' || event.type === 'generating' || event.type === 'executing_tools')) {
+          setProcessingStartTime(new Date());
+        }
       }
     };
 
@@ -151,6 +153,25 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       coreAgent.off('progress', handleProgress);
     };
   }, [coreAgent]);
+
+  // Timer effect to update elapsed time
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (processingStartTime) {
+      interval = setInterval(() => {
+        const now = new Date();
+        const elapsed = (now.getTime() - processingStartTime.getTime()) / 1000;
+        setElapsedTime(elapsed);
+      }, 100); // Update every 100ms for smooth display
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [processingStartTime]);
 
   // Process queue when agent finishes
   const processQueue = useCallback(async () => {
@@ -268,7 +289,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       if (coreAgent.isCurrentlyProcessing()) {
         coreAgent.abort();
         setCurrentStatus('');
-        setTokenUsage(null);
+        setElapsedTime(0);
       }
     }
   });
@@ -323,8 +344,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           {currentStatus && (
             <Text color="green">
               ✻ {currentStatus}
-              {tokenUsage && (
-                <Text color="gray"> [{tokenUsage.inputTokens + tokenUsage.outputTokens} tokens]</Text>
+              {processingStartTime && (
+                <Text color="gray"> [{Math.floor(elapsedTime)}s]</Text>
               )}
             </Text>
           )}

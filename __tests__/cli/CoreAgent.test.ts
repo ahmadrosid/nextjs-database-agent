@@ -39,7 +39,7 @@ describe('CoreAgent', () => {
       const mockResponse = 'Test response from LLM';
       
       // Mock LLM to call the onGenerating callback
-      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
         // Simulate generating callback
         if (onGenerating) {
           onGenerating();
@@ -73,7 +73,7 @@ describe('CoreAgent', () => {
       const mockResponse = 'Test response from LLM';
       
       // Mock LLM to call tool execution callback
-      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
         // Simulate thinking callback
         if (onThinking) {
           onThinking('Thinking about the query');
@@ -214,7 +214,6 @@ describe('CoreAgent', () => {
         expect.any(Function), // onThinking callback
         expect.any(Object),   // toolManager
         expect.any(Function), // onToolExecution callback
-        expect.any(Function), // onTokenUpdate callback
         expect.any(Object),   // abortSignal
         expect.any(Function), // onToolComplete callback
         expect.any(Function), // onGenerating callback
@@ -307,7 +306,6 @@ describe('CoreAgent', () => {
         expect.any(Function), // onThinking callback
         expect.any(Object),   // toolManager
         expect.any(Function), // onToolExecution callback
-        expect.any(Function), // onTokenUpdate callback
         expect.any(Object),   // abortSignal
         expect.any(Function), // onToolComplete callback
         expect.any(Function), // onGenerating callback
@@ -339,7 +337,7 @@ describe('CoreAgent', () => {
 
       // Check the second call includes conversation history
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8]; // 9th parameter (0-indexed)
+      const conversationHistory = secondCall[7]; // 8th parameter (0-indexed)
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'first query' },
@@ -383,7 +381,7 @@ describe('CoreAgent', () => {
 
       // Check the third call includes all previous conversation
       const thirdCall = mockLLMService.generateResponse.mock.calls[2];
-      const conversationHistory = thirdCall[8]; // 9th parameter (0-indexed)
+      const conversationHistory = thirdCall[7]; // 8th parameter (0-indexed)
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'query 1' },
@@ -417,7 +415,7 @@ describe('CoreAgent', () => {
 
       // Check the last call includes only the most recent 10 exchanges (20 messages)
       const lastCall = mockLLMService.generateResponse.mock.calls[14]; // 15th call (0-indexed)
-      const conversationHistory = lastCall[8]; // 9th parameter (0-indexed)
+      const conversationHistory = lastCall[7]; // 8th parameter (0-indexed)
       
       expect(conversationHistory).toBeDefined();
       expect(conversationHistory).toHaveLength(20); // 10 exchanges = 20 messages
@@ -443,7 +441,7 @@ describe('CoreAgent', () => {
             { role: 'assistant' as const, content: 'First response without tools' }
           ]
         })
-        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
           // Simulate tool execution callback
           if (onToolExecution) {
             onToolExecution('read_file(package.json)');
@@ -470,7 +468,7 @@ describe('CoreAgent', () => {
 
       // Check the second call includes conversation history with tool interactions
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8]; // 9th parameter (0-indexed)
+      const conversationHistory = secondCall[7]; // 8th parameter (0-indexed)
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'first query' },
@@ -481,7 +479,7 @@ describe('CoreAgent', () => {
     it('should preserve tool interaction context across multiple queries', async () => {
       // Mock tool use scenario followed by regular query
       mockLLMService.generateResponse
-        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
           // Simulate tool execution
           if (onToolExecution) {
             onToolExecution('read_file(package.json)');
@@ -514,7 +512,7 @@ describe('CoreAgent', () => {
 
       // Check that the second query has access to the first conversation
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8];
+      const conversationHistory = secondCall[7];
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'What React version is used?' },
@@ -525,7 +523,7 @@ describe('CoreAgent', () => {
     it('should handle multiple tool uses in a single query within conversation history', async () => {
       // Mock a query that uses multiple tools
       mockLLMService.generateResponse
-        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete) => {
+        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete) => {
           // Simulate multiple tool executions
           if (onToolExecution) {
             onToolExecution('read_file(package.json)');
@@ -565,7 +563,7 @@ describe('CoreAgent', () => {
 
       // Verify conversation history is maintained correctly
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8];
+      const conversationHistory = secondCall[7];
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'What technologies does this project use?' },
@@ -576,7 +574,7 @@ describe('CoreAgent', () => {
     it('should maintain conversation history even when tools encounter errors', async () => {
       // Mock a scenario with tool error
       mockLLMService.generateResponse
-        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete) => {
+        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete) => {
           if (onToolExecution) {
             onToolExecution('read_file(nonexistent.json)');
           }
@@ -607,7 +605,7 @@ describe('CoreAgent', () => {
 
       // Verify error handling preserves conversation context
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8];
+      const conversationHistory = secondCall[7];
       
       expect(conversationHistory).toEqual([
         { role: 'user' as const, content: 'Read nonexistent.json file' },
@@ -621,7 +619,7 @@ describe('CoreAgent', () => {
       // Currently this will fail, but shows what we want to achieve
       
       mockLLMService.generateResponse
-        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete) => {
+        .mockImplementationOnce(async (query, onThinking, toolManager, onToolExecution, abortSignal, onToolComplete) => {
           // Simulate tool execution
           if (onToolExecution) {
             onToolExecution('read_file(package.json)');
@@ -653,7 +651,7 @@ describe('CoreAgent', () => {
 
       // In the future implementation, the second call should include the complete tool interaction
       const secondCall = mockLLMService.generateResponse.mock.calls[1];
-      const conversationHistory = secondCall[8];
+      const conversationHistory = secondCall[7];
       
       // TODO: This is what we WANT the conversation history to look like:
       // expect(conversationHistory).toEqual([
