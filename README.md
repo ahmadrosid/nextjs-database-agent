@@ -1,1 +1,1 @@
-# Next AI Coding Agent
+# NextJS Coding Agent
