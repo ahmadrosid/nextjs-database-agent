@@ -1,11 +1,11 @@
-import { CoreAgent } from '../../lib/agent/core/CoreAgent';
-import { LLMService } from '../../lib/agent/core/llm';
-import { ProgressEvent } from '../../lib/agent/types/index';
-import { ToolManager } from '../../lib/agent/core/tools/index';
+import { CoreAgent } from '../../agent/core/CoreAgent';
+import { LLMService } from '../../agent/core/llm';
+import { ProgressEvent } from '../../agent/types/index';
+import { ToolManager } from '../../agent/core/tools/index';
 
 // Mock the LLMService and ToolManager
-jest.mock('../../lib/agent/core/llm');
-jest.mock('../../lib/agent/core/tools/index');
+jest.mock('../../agent/core/llm');
+jest.mock('../../agent/core/tools/index');
 
 // Mock globby to avoid ES module issues
 jest.mock('globby', () => ({

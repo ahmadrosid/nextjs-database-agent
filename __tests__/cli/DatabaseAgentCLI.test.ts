@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { DatabaseAgentCLI } from '../../lib/agent/cli/DatabaseAgentCLI';
+import { DatabaseAgentCLI } from '../../agent/cli/DatabaseAgentCLI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -65,14 +65,14 @@ describe('DatabaseAgentCLI', () => {
   });
 
   describe('start method', () => {
-    it('should log startup message with chalk.blue', () => {
+    it('should log startup message with chalk.gray', () => {
       // Mock console.log to track calls
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       
       cli.start();
       
       expect(consoleSpy).toHaveBeenCalledWith('Starting Database Agent CLI...');
-      expect(mockChalk.blue).toHaveBeenCalledWith('Starting Database Agent CLI...');
+      expect(mockChalk.gray).toHaveBeenCalledWith('Starting Database Agent CLI...');
       
       consoleSpy.mockRestore();
     });
@@ -100,7 +100,7 @@ describe('DatabaseAgentCLI', () => {
       }).not.toThrow();
       
       // Should call the expected functions
-      expect(mockChalk.blue).toHaveBeenCalled();
+      expect(mockChalk.gray).toHaveBeenCalled();
       expect(mockRender).toHaveBeenCalled();
       
       consoleSpy.mockRestore();

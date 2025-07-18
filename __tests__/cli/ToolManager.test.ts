@@ -1,10 +1,10 @@
-import { ToolManager } from '../../lib/agent/core/tools/index';
-import { ToolCall, ToolResult } from '../../lib/agent/types/index';
+import { ToolManager } from '../../agent/core/tools/index';
+import { ToolCall, ToolResult } from '../../agent/types/index';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { resolve } from 'path';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
-import { bashCommandTool } from '../../lib/agent/core/tools/bashCommand';
+import { bashCommandTool } from '../../agent/core/tools/bashCommand';
 
 // Mock fs/promises, globby, and child_process to avoid file system dependencies
 jest.mock('fs/promises');
@@ -20,7 +20,7 @@ jest.mock('child_process');
 let globalMockExecAsync: jest.Mock;
 
 // Mock the bash command module directly
-jest.mock('../../lib/agent/core/tools/bashCommand', () => {
+jest.mock('../../agent/core/tools/bashCommand', () => {
   return {
     bashCommandTool: {
       name: 'bash_command',

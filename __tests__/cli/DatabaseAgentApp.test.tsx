@@ -46,7 +46,7 @@ jest.mock('ink-text-input', () => ({
 }));
 
 // Import the component after mocking
-import { DatabaseAgentCLI } from '../../lib/agent/cli/DatabaseAgentCLI';
+import { DatabaseAgentCLI } from '../../agent/cli/DatabaseAgentCLI';
 
 // Extract the React component from the CLI class
 const DatabaseAgentApp: React.FC = () => {

@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { ToolManager } from './tools/index.js';
 import { TokenUsage } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { SYSTEM_PROMPT } from '../../prompts/systemPrompt.js';
+import { SYSTEM_PROMPT } from '../prompts/systemPrompt.js';
 
 dotenv.config();
 
