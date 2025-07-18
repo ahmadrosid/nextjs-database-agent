@@ -131,12 +131,13 @@ describe('ToolManager', () => {
     it('should register all tools by default', () => {
       const availableTools = toolManager.getAvailableTools();
       
-      expect(availableTools).toHaveLength(5);
+      expect(availableTools).toHaveLength(6);
       expect(availableTools.map(tool => tool.name)).toContain('list_files');
       expect(availableTools.map(tool => tool.name)).toContain('read_file');
       expect(availableTools.map(tool => tool.name)).toContain('write_file');
       expect(availableTools.map(tool => tool.name)).toContain('bash_command');
       expect(availableTools.map(tool => tool.name)).toContain('search_files');
+      expect(availableTools.map(tool => tool.name)).toContain('diff_edit');
     });
 
     it('should provide tool descriptions for LLM', () => {

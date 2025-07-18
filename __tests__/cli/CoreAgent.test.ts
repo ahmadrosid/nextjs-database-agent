@@ -37,7 +37,16 @@ describe('CoreAgent', () => {
   describe('Event Emission Order', () => {
     it('should emit progress events in correct order during successful processing without tools', async () => {
       const mockResponse = 'Test response from LLM';
-      mockLLMService.generateResponse.mockResolvedValue(mockResponse);
+      
+      // Mock LLM to call the onGenerating callback
+      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating) => {
+        // Simulate generating callback
+        if (onGenerating) {
+          onGenerating();
+        }
+        
+        return mockResponse;
+      });
 
       const events: ProgressEvent[] = [];
       coreAgent.on('progress', (event: ProgressEvent) => {
@@ -58,7 +67,7 @@ describe('CoreAgent', () => {
       const mockResponse = 'Test response from LLM';
       
       // Mock LLM to call tool execution callback
-      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution) => {
+      mockLLMService.generateResponse.mockImplementation(async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating) => {
         // Simulate thinking callback
         if (onThinking) {
           onThinking('Thinking about the query');
@@ -67,6 +76,11 @@ describe('CoreAgent', () => {
         // Simulate tool execution callback
         if (onToolExecution) {
           onToolExecution('list_files');
+        }
+        
+        // Simulate generating callback
+        if (onGenerating) {
+          onGenerating();
         }
         
         return mockResponse;
@@ -190,7 +204,8 @@ describe('CoreAgent', () => {
         expect.any(Function), // onToolExecution callback
         expect.any(Function), // onTokenUpdate callback
         expect.any(Object),   // abortSignal
-        expect.any(Function)  // onToolComplete callback
+        expect.any(Function), // onToolComplete callback
+        expect.any(Function)  // onGenerating callback
       );
     });
 
