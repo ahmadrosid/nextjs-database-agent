@@ -6,7 +6,6 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import { CoreAgent } from '../core/CoreAgent.js';
 import { ProgressEvent } from '../types/index.js';
-import { logger } from '../utils/logger.js';
 
 // Configure marked-terminal for better terminal rendering
 marked.setOptions({
@@ -62,6 +61,8 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
   const [coreAgent] = useState(() => new CoreAgent());
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [tokenUsage, setTokenUsage] = useState<{ inputTokens: number; outputTokens: number; totalTokens: number } | null>(null);
+  const [instructionQueue, setInstructionQueue] = useState<string[]>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
 
   // Process initial prompt if provided
@@ -132,8 +133,78 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
     };
   }, [coreAgent]);
 
+  // Process queue when agent finishes
+  const processQueue = useCallback(async () => {
+    if (isProcessingQueue || instructionQueue.length === 0 || coreAgent.isCurrentlyProcessing()) {
+      return;
+    }
+
+    setIsProcessingQueue(true);
+    
+    while (instructionQueue.length > 0) {
+      const nextInstruction = instructionQueue[0];
+      setInstructionQueue(prev => prev.slice(1));
+      
+      // Add queued message indicator
+      const queuedMessage: OutputMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `${nextInstruction} 📝 *[from queue]*`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, queuedMessage]);
+
+      // Process queued instruction
+      try {
+        const response = await coreAgent.processQuery(nextInstruction);
+        const agentMessage: OutputMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'agent',
+          content: response,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, agentMessage]);
+      } catch (error) {
+        const errorMessage: OutputMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'agent',
+          content: error instanceof Error && error.message === 'Operation was cancelled' 
+            ? 'Operation was cancelled by user.' 
+            : 'Sorry, I encountered an error processing your queued request.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    }
+
+    setIsProcessingQueue(false);
+  }, [coreAgent, instructionQueue, isProcessingQueue]);
+
+  // Watch for agent completion to process queue
+  useEffect(() => {
+    if (!coreAgent.isCurrentlyProcessing() && !isProcessingQueue) {
+      processQueue();
+    }
+  }, [currentStatus, processQueue, isProcessingQueue]);
+
   const handleSubmit = useCallback(async (value: string) => {
     if (!value.trim()) return;
+
+    // If agent is busy, add to queue
+    if (coreAgent.isCurrentlyProcessing()) {
+      setInstructionQueue(prev => [...prev, value]);
+      
+      // Add queued user message with indicator
+      const queuedUserMessage: OutputMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `${value} ⏳ *[queued - ${instructionQueue.length + 1} in queue]*`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, queuedUserMessage]);
+      setInput('');
+      return;
+    }
 
     // Add user message
     const userMessage: OutputMessage = {
@@ -167,7 +238,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       };
       setMessages(prev => [...prev, errorMessage]);
     }
-  }, [coreAgent]);
+  }, [coreAgent, instructionQueue]);
 
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
@@ -209,14 +280,21 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       </Box>
 
       {/* Status Area - between output and input */}
-      {currentStatus && (
+      {(currentStatus || instructionQueue.length > 0) && (
         <Box>
-          <Text color="yellow">
-            ⚡ {currentStatus}
-            {tokenUsage && (
-              <Text color="gray"> [{tokenUsage.inputTokens + tokenUsage.outputTokens} tokens]</Text>
-            )}
-          </Text>
+          {currentStatus && (
+            <Text color="yellow">
+              ⚡ {currentStatus}
+              {tokenUsage && (
+                <Text color="gray"> [{tokenUsage.inputTokens + tokenUsage.outputTokens} tokens]</Text>
+              )}
+            </Text>
+          )}
+          {instructionQueue.length > 0 && (
+            <Text color="magenta">
+              📝 {instructionQueue.length} instruction{instructionQueue.length > 1 ? 's' : ''} queued
+            </Text>
+          )}
         </Box>
       )}
 
