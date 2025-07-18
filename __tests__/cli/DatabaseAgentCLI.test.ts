@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { DatabaseAgentCLI } from '../../agent/cli/DatabaseAgentCLI';
+import { AgentCLI } from '../../agent/cli/DatabaseAgentCLI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -41,8 +41,8 @@ jest.mock('ink-text-input', () => ({
   })),
 }));
 
-describe('DatabaseAgentCLI', () => {
-  let cli: DatabaseAgentCLI;
+describe('AgentCLI', () => {
+  let cli: AgentCLI;
   let mockRender: jest.Mock;
   let mockChalk: any;
 
@@ -55,12 +55,12 @@ describe('DatabaseAgentCLI', () => {
     mockChalk = require('chalk');
     
     // Create new CLI instance
-    cli = new DatabaseAgentCLI();
+    cli = new AgentCLI();
   });
 
   describe('constructor', () => {
-    it('should create a new DatabaseAgentCLI instance', () => {
-      expect(cli).toBeInstanceOf(DatabaseAgentCLI);
+    it('should create a new AgentCLI instance', () => {
+      expect(cli).toBeInstanceOf(AgentCLI);
     });
   });
 

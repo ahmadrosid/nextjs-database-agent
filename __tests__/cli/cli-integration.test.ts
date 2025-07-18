@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { DatabaseAgentCLI } from '../../agent/cli/DatabaseAgentCLI';
+import { AgentCLI } from '../../agent/cli/DatabaseAgentCLI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -37,7 +37,7 @@ jest.mock('ink-text-input', () => ({
 }));
 
 describe('CLI Integration Tests', () => {
-  let cli: DatabaseAgentCLI;
+  let cli: AgentCLI;
   let mockRender: jest.Mock;
   let consoleSpy: jest.SpyInstance;
 
@@ -45,7 +45,7 @@ describe('CLI Integration Tests', () => {
     jest.clearAllMocks();
     mockRender = require('ink').render;
     consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-    cli = new DatabaseAgentCLI();
+    cli = new AgentCLI();
   });
 
   afterEach(() => {
@@ -89,11 +89,11 @@ describe('CLI Integration Tests', () => {
 
   describe('CLI Class Behavior', () => {
     it('should be instantiable multiple times', () => {
-      const cli1 = new DatabaseAgentCLI();
-      const cli2 = new DatabaseAgentCLI();
+      const cli1 = new AgentCLI();
+      const cli2 = new AgentCLI();
 
-      expect(cli1).toBeInstanceOf(DatabaseAgentCLI);
-      expect(cli2).toBeInstanceOf(DatabaseAgentCLI);
+      expect(cli1).toBeInstanceOf(AgentCLI);
+      expect(cli2).toBeInstanceOf(AgentCLI);
       expect(cli1).not.toBe(cli2);
     });
 

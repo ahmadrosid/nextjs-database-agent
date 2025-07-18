@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { DatabaseAgentCLI } from '../agent/cli/DatabaseAgentCLI';
+import { AgentCLI } from '../agent/cli/DatabaseAgentCLI';
 
 program
   .name('database-agent')
@@ -13,7 +13,7 @@ program
   .description('Start the interactive database agent')
   .argument('[prompt]', 'Initial prompt to process')
   .action((prompt?: string) => {
-    const cli = new DatabaseAgentCLI();
+    const cli = new AgentCLI();
     cli.start(prompt);
   });
 

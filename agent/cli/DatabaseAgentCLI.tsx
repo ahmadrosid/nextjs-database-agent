@@ -234,7 +234,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
   );
 };
 
-export class DatabaseAgentCLI {
+export class AgentCLI {
   start(initialPrompt?: string) {
     console.log(chalk.gray('Starting Database Agent CLI...'));
     render(<DatabaseAgentApp initialPrompt={initialPrompt} />);
