@@ -53,9 +53,22 @@ export class LLMService {
       const stream = this.client.messages.stream({
         model: this.model,
         max_tokens: 2048,
-        system: this.systemPrompt,
+        system: [
+          {
+            type: "text",
+            text: this.systemPrompt,
+            cache_control: { type: "ephemeral" }
+          }
+        ],
         messages,
-        tools: tools.length > 0 ? tools : undefined,
+        tools: tools.length > 0 ? tools.map(tool => ({
+          ...tool,
+          cache_control: { type: "ephemeral" }
+        })) : undefined,
+      }, {
+        headers: {
+          "anthropic-beta": "prompt-caching-2024-07-31"
+        }
       });
 
       let fullResponse = '';
@@ -215,9 +228,22 @@ export class LLMService {
     const finalResponse = await this.client.messages.create({
       model: this.model,
       max_tokens: 2048,
-      system: this.systemPrompt,
+      system: [
+        {
+          type: "text",
+          text: this.systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
       messages,
-      tools: toolManager.getToolsForClaudeAPI(),
+      tools: toolManager.getToolsForClaudeAPI().map(tool => ({
+        ...tool,
+        cache_control: { type: "ephemeral" }
+      })),
+    }, {
+      headers: {
+        "anthropic-beta": "prompt-caching-2024-07-31"
+      }
     });
 
     // Handle potential additional tool calls recursively
@@ -320,9 +346,22 @@ export class LLMService {
     const finalResponse = await this.client.messages.create({
       model: this.model,
       max_tokens: 2048,
-      system: this.systemPrompt,
+      system: [
+        {
+          type: "text",
+          text: this.systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
       messages,
-      tools: toolManager.getToolsForClaudeAPI(),
+      tools: toolManager.getToolsForClaudeAPI().map(tool => ({
+        ...tool,
+        cache_control: { type: "ephemeral" }
+      })),
+    }, {
+      headers: {
+        "anthropic-beta": "prompt-caching-2024-07-31"
+      }
     });
 
     // Handle potential additional tool calls recursively
