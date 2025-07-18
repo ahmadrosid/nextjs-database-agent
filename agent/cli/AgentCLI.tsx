@@ -8,6 +8,7 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import { CoreAgent } from '../core/CoreAgent.js';
 import { ProgressEvent } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 marked.use(markedTerminal() as any);
 
@@ -52,6 +53,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
   // Process initial prompt if provided
   useEffect(() => {
     if (initialPrompt) {
+      setCurrentStatus('Processing initial prompt...');
       handleSubmit(initialPrompt);
     }
   }, [initialPrompt]);
@@ -96,7 +98,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           const toolResultMessage: OutputMessage = {
             id: Date.now().toString(),
             type: 'agent',
-            content: `✅ **Tool Result:** ${event.message}`,
+            content: `**Tool Result:** ${event.message}`,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, toolResultMessage]);
@@ -109,7 +111,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           const toolErrorMessage: OutputMessage = {
             id: Date.now().toString(),
             type: 'agent',
-            content: `❌ **Tool Error:** ${event.message}`,
+            content: `**Tool Error:** ${event.message}`,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, toolErrorMessage]);
@@ -125,16 +127,15 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
         } else {
           // Use status map for other events
           const statusMap = {
-            thinking: 'Thinking',
-            analyzing: 'Analyzing',
-            generating: 'Generating'
+            thinking: 'Thinking...',
+            analyzing: 'Analyzing...',
+            generating: 'Generating...'
           };
           newStatus = statusMap[event.type] || event.type;
         }
+        logger.debug("AgentCLI", "newStatus", {newStatus});
         setCurrentStatus(newStatus);
       }
-
-      // Don't add progress messages to history - only show in status area
     };
 
     coreAgent.on('progress', handleProgress);
@@ -267,26 +268,24 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
   return (
     <Box flexDirection="column" minHeight="100%">
       {/* Output Area - grows dynamically */}
-      <Box flexDirection="column" flexGrow={1} paddingX={1} paddingY={1}>
+      <Box flexDirection="column" flexGrow={1} padding={1}>
         {messages.map((message) => (
-          <Box key={message.id} marginBottom={1}>
+          <Box key={message.id}>
             {message.type === 'agent' ? (
-              <Text color={
-                message.content.startsWith('**Tool Result:**') || message.content.startsWith('**Tool Error:**') 
-                  ? 'gray' 
-                  : undefined
-              }>
+              <Text color={'gray'} dimColor>
                 {formatMarkdown(message.content)}
               </Text>
             ) : (
-              <Text color={
-                message.type === 'user' ? 'cyan' :
-                message.type === 'progress' ? 'yellow' : 'green'
-              }>
-                {message.type === 'user' ? '> ' :
-                 message.type === 'progress' ? '✻ ' : ''}
-                {message.content}
-              </Text>
+              <Box marginBottom={1}>
+                <Text color={
+                  message.type === 'user' ? 'cyan' :
+                  message.type === 'progress' ? 'yellow' : 'green'
+                }>
+                  {message.type === 'user' ? '> ' :
+                  message.type === 'progress' ? '✻ ' : ''}
+                  {message.content}
+                </Text>
+              </Box>
             )}
           </Box>
         ))}
@@ -294,7 +293,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
 
       {/* Status Area - between output and input */}
       {(currentStatus || instructionQueue.length > 0) && (
-        <Box>
+        <Box paddingX={1}>
           {currentStatus && (
             <Text color="green">
               ✻ {currentStatus}
@@ -312,7 +311,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       )}
 
       {/* Input Area - always at bottom */}
-      <Box borderStyle="round" borderColor="gray" paddingX={1} flexShrink={0}>
+      <Box borderStyle="round" borderColor="gray" paddingX={1} marginBottom={2} flexShrink={0}>
         <Text color="gray">Orchids: </Text>
         <TextInput
           value={input}

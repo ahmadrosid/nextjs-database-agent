@@ -90,6 +90,14 @@ export class CoreAgent extends EventEmitter {
             timestamp: new Date(),
             data: { toolName, result, isError }
           });
+        },
+        () => {
+          // onGenerating callback - emit 'generating' progress event
+          this.emitProgress({
+            type: 'generating',
+            message: 'Finalizing response...',
+            timestamp: new Date(),
+          });
         }
       );
 
@@ -102,12 +110,6 @@ export class CoreAgent extends EventEmitter {
         });
       }
 
-      // Emit generating event
-      this.emitProgress({
-        type: 'generating',
-        message: 'Finalizing response...',
-        timestamp: new Date(),
-      });
 
       // Emit complete event
       this.emitProgress({

@@ -25,7 +25,8 @@ export class LLMService {
     onToolExecution?: (toolName: string) => void,
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
-    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
+    onGenerating?: () => void
   ): Promise<string> {
     try {
       // Check if query contains thinking triggers
@@ -141,7 +142,7 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
+        return await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
       }
 
       return fullResponse || 'I was unable to generate a response.';
@@ -163,7 +164,8 @@ export class LLMService {
     onToolExecution?: (toolName: string) => void,
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
-    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
+    onGenerating?: () => void
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
@@ -231,6 +233,11 @@ export class LLMService {
       throw abortError;
     }
 
+    // Notify that we're generating the final response
+    if (onGenerating) {
+      onGenerating();
+    }
+
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: this.model,
@@ -256,7 +263,7 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
     }
 
     // Return the final text response
@@ -290,7 +297,8 @@ export class LLMService {
     onToolExecution?: (toolName: string) => void,
     onTokenUpdate?: (tokenUsage: TokenUsage) => void,
     abortSignal?: AbortSignal,
-    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void
+    onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
+    onGenerating?: () => void
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
@@ -358,6 +366,11 @@ export class LLMService {
       throw abortError;
     }
 
+    // Notify that we're generating the final response
+    if (onGenerating) {
+      onGenerating();
+    }
+
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: this.model,
@@ -383,7 +396,7 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
-      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete);
+      return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating);
     }
 
     // Return the final text response
