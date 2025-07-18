@@ -97,6 +97,10 @@ After context discovery, determine implementation scope based on:
    - Create POST route to add new records
    - Add UPDATE and DELETE routes if relevant
    - Implement proper error handling and validation
+   - **CRITICAL**: Always validate foreign key references before inserting data
+     • When inserting records with ID references, verify referenced records exist
+     • Return appropriate error responses for invalid references
+     • Use database queries to check existence before insertion
 
 4. **Integration Ready** (if missing):
    - Export database functions for use in components
