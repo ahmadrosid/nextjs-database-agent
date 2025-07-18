@@ -10,6 +10,7 @@ dotenv.config();
 export class LLMService {
   private client: Anthropic;
   private systemPrompt: string;
+  private model: string;
 
   constructor() {
     this.client = new Anthropic({
@@ -17,6 +18,7 @@ export class LLMService {
     });
     
     this.systemPrompt = SYSTEM_PROMPT;
+    this.model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
   }
 
   async generateResponse(
@@ -49,7 +51,7 @@ export class LLMService {
       
       // Use streaming for real-time token counting
       const stream = this.client.messages.stream({
-        model: 'claude-3-5-sonnet-20241022',
+        model: this.model,
         max_tokens: 2048,
         system: this.systemPrompt,
         messages,
@@ -211,7 +213,7 @@ export class LLMService {
 
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: this.model,
       max_tokens: 2048,
       system: this.systemPrompt,
       messages,
@@ -316,7 +318,7 @@ export class LLMService {
 
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: this.model,
       max_tokens: 2048,
       system: this.systemPrompt,
       messages,

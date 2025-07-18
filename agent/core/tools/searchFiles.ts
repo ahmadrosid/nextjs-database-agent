@@ -4,7 +4,7 @@ import { Tool } from '../../types/index.js';
 
 export const searchFilesTool: Tool = {
   name: 'search_files',
-  description: 'Search for text content within files using ripgrep',
+  description: 'Search for text content within files using ripgrep. Use this tool when you need to find references, function definitions, imports, or any text patterns across the codebase.',
   parameters: {
     type: 'object',
     properties: {
