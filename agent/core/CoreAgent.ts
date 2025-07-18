@@ -110,8 +110,6 @@ export class CoreAgent extends EventEmitter {
         });
       }
 
-
-      // Emit complete event
       this.emitProgress({
         type: 'complete',
         message: 'Query processed successfully',
@@ -133,7 +131,6 @@ export class CoreAgent extends EventEmitter {
         throw error;
       }
 
-      // Emit error event
       this.emitProgress({
         type: 'error',
         message: error instanceof Error ? error.message : 'An error occurred',

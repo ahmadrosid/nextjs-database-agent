@@ -204,7 +204,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
     if (!coreAgent.isCurrentlyProcessing() && !isProcessingQueue) {
       processQueue();
     }
-  }, [currentStatus, processQueue, isProcessingQueue]);
+  }, [currentStatus, isProcessingQueue]);
 
   const handleSubmit = useCallback(async (value: string) => {
     if (!value.trim()) return;
