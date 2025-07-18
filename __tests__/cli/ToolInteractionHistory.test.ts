@@ -1,6 +1,5 @@
 import { CoreAgent } from '../../agent/core/CoreAgent';
 import { LLMService } from '../../agent/core/llm';
-import { ToolManager } from '../../agent/core/tools/index';
 
 // Mock the LLMService and ToolManager
 jest.mock('../../agent/core/llm');
@@ -14,13 +13,11 @@ jest.mock('globby', () => ({
 describe('Tool Interaction History', () => {
   let coreAgent: CoreAgent;
   let mockLLMService: jest.Mocked<LLMService>;
-  let mockToolManager: jest.Mocked<ToolManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     coreAgent = new CoreAgent();
     mockLLMService = jest.mocked(LLMService.prototype);
-    mockToolManager = jest.mocked(ToolManager.prototype);
   });
 
   afterEach(() => {
@@ -31,7 +28,7 @@ describe('Tool Interaction History', () => {
     it('should capture tool_use and tool_result blocks in conversation history', async () => {
       // Mock the first query that uses tools
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // This should trigger tool use internally
           return {
             response: 'Based on package.json, this project uses React 19',
@@ -45,7 +42,7 @@ describe('Tool Interaction History', () => {
 
       // Mock the second query 
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // We want to verify that conversationHistory contains the complete tool interaction cycle
           return {
             response: 'I already checked that file in my previous response',
@@ -103,6 +100,7 @@ describe('Tool Interaction History', () => {
         { role: 'assistant' as const, content: 'Based on package.json, this project uses React 19' }
       ]);
       */
+
     });
 
     it('should preserve tool interactions across multiple conversation turns', async () => {
@@ -110,7 +108,7 @@ describe('Tool Interaction History', () => {
       
       // First query: Uses read_file tool
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query) => {
+        async (_query) => {
           return {
             response: 'React version is 19.0.0',
             conversationHistory: [
@@ -123,7 +121,7 @@ describe('Tool Interaction History', () => {
 
       // Second query: Uses search_files tool  
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query) => {
+        async (_query) => {
           return {
             response: 'Found 5 TypeScript files',
             conversationHistory: [
@@ -138,7 +136,7 @@ describe('Tool Interaction History', () => {
 
       // Third query: Should have access to both previous tool interactions
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           return {
             response: 'Based on my previous searches, this is a React 19 TypeScript project',
             conversationHistory: [
@@ -176,7 +174,7 @@ describe('Tool Interaction History', () => {
       // Test that tool errors are also preserved in conversation history
       
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query) => {
+        async (_query) => {
           return {
             response: 'File not found: nonexistent.json',
             conversationHistory: [
@@ -188,7 +186,7 @@ describe('Tool Interaction History', () => {
       );
 
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           return {
             response: 'I already tried to read that file but it does not exist',
             conversationHistory: [
@@ -257,14 +255,14 @@ describe('Tool Interaction History', () => {
       
       // Mock a realistic tool execution scenario
       mockLLMService.generateResponse.mockImplementationOnce(
-        async (query, onThinking, toolManager, onToolExecution, onTokenUpdate, abortSignal, onToolComplete, onGenerating, conversationHistory) => {
+        async (_query, _onThinking, _toolManager, _onToolExecution, _onTokenUpdate, _abortSignal, _onToolComplete, _onGenerating, _conversationHistory) => {
           // Simulate real tool execution flow
-          if (onToolExecution) {
-            onToolExecution('read_file(package.json)');
+          if (_onToolExecution) {
+            _onToolExecution('read_file(package.json)');
           }
           
-          if (onToolComplete) {
-            onToolComplete('read_file', '{"name": "test", "dependencies": {"react": "^19.0.0"}}', false);
+          if (_onToolComplete) {
+            _onToolComplete('read_file', '{"name": "test", "dependencies": {"react": "^19.0.0"}}', false);
           }
           
           return {

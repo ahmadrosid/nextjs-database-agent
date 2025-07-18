@@ -61,7 +61,7 @@ describe('LLMService Tool History Integration', () => {
         })
       };
 
-      mockAnthropicClient.messages.stream.mockReturnValueOnce(mockAsyncIterator as any);
+      (mockAnthropicClient.messages.stream as jest.Mock).mockReturnValueOnce(mockAsyncIterator as any);
 
       // Mock tool execution
       const mockToolManager = {
@@ -114,8 +114,6 @@ describe('LLMService Tool History Integration', () => {
 
     it('should build correct conversation history structure for tool interactions', async () => {
       // This test defines the exact structure we want for conversation history with tools
-      
-      const conversationHistory: Anthropic.Messages.MessageParam[] = [];
       
       // Simulate what the conversation history should look like after a tool interaction
       const expectedHistoryAfterToolUse: Anthropic.Messages.MessageParam[] = [
