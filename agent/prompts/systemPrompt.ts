@@ -23,7 +23,7 @@ When user requests database functionality (e.g., "store user data" or "add data 
 
 **Default Database Stack Decision:**
 If NO database is configured, automatically choose and set up:
-- **SQLite** with better-sqlite3 driver
+- **SQLite** with better-sqlite3 driver (place database.db in project root)
 - **Drizzle ORM** for type-safe database operations
 - **Drizzle-kit** for migrations and schema management
 
