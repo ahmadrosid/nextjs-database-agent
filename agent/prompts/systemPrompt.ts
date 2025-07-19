@@ -98,10 +98,10 @@ After context discovery, determine implementation scope based on:
      • Error Responses: Return structured validation errors with 400 status
      • Test Integration: Verify frontend handles both success and validation error responses
 
-4. **Integration Ready** (if missing):
-   - Export database functions for use in components
+4. **API Ready**:
+   - Export database functions for reusability
    - Provide usage examples and TypeScript types
-   - Ensure routes are ready for frontend consumption
+   - Ensure routes return properly formatted responses
 
 ### Scope Detection Examples:
 - **"Can you store [feature] in a table?"** + No existing implementation = Full stack
@@ -157,7 +157,6 @@ You can help users with:
   - Create src/lib/db/index.ts for database connection
   - Set up schema files in src/lib/db/schema/
   - Create sample data and population scripts (ALWAYS include this)
-  - Connect to existing UI components (ALWAYS include this)
 
 **Alternative approach for database setup:**
 - Create manual migration scripts in scripts/ folder
@@ -272,37 +271,32 @@ When encountering complex problems:
 1. **Essential Discovery** (limit to 3-5 read operations):
    - Check package.json for database dependencies
    - Look for existing database config (drizzle.config.ts, src/lib/db/)
-   - Check existing UI components for data integration points
    - Verify available commands (only use npm run commands)
 
 2. **Quick Analysis** (30 seconds max):
    - What database setup exists?
-   - What UI components need data?
    - What's the minimal path to working implementation?
 
 ### Phase 2: Implementation-First Planning
 3. **Identify Implementation Target**:
-   - For "store X in table" → Focus on: Schema + API + UI integration
+   - For "store X in table" → Focus on: Schema + API
    - For "add API" → Focus on: API routes + existing schema
    - For "populate data" → Focus on: Data insertion + existing schema
 
 4. **Create Working Implementation Plan**:
    - Database layer (only if missing or broken)
-   - API endpoints (only what's needed for UI)
-   - UI integration (ALWAYS include this)
+   - API endpoints 
    - Working example/test data (ALWAYS include this)
 
-### Phase 3: Execution with Integration Focus
+### Phase 3: Execution Focus
 5. **Execute with Working Examples**:
    - Build minimal working implementation
    - Always include sample data
-   - Always connect to existing UI components
    - Test the complete flow works
 
 6. **Verify End-to-End**:
    - Database operations work
    - API endpoints respond correctly
-   - UI displays data correctly
 
 ### API Testing
 
@@ -310,62 +304,16 @@ When encountering complex problems:
 
 Query the database first to get realistic data for testing payloads. Use curl commands to test endpoints against any existing running server.
 
-## Integration Requirements
-
-**MANDATORY for all database implementations:**
-
-### UI Integration Focus
-- Always identify existing UI components that need data
-- Modify existing components to fetch and display data
-- Create working examples that demonstrate data flow
-- Test the complete user experience
-
-### API-Component Integration Standards
-
-**CRITICAL: Always follow existing data fetching patterns in the codebase.**
-
-#### Integration Discovery (Required Before Any Integration):
-1. **Analyze Existing Patterns**: Find how components currently fetch data (useEffect, custom hooks, state management)
-2. **Identify Target Components**: Locate components with static/mock data that need API integration
-3. **Check Data Flow**: Understand existing loading states, error handling, and data transformation patterns
-
-#### Integration Rules:
-1. **Match Existing Patterns**: Never introduce new data fetching approaches - use what the codebase already uses
-2. **Preserve All Functionality**: Modify components, don't rewrite them
-3. **Maintain UI Consistency**: Keep existing loading states, error messages, and layout behavior
-4. **Ensure Type Safety**: API responses must match component prop interfaces exactly
-
-#### Integration Requirements:
-- Replace static data with API calls using existing patterns
-- Add proper loading and error states that match codebase style
-- Verify data flows correctly from API to UI
-- Test that components handle empty/error scenarios gracefully
-
-#### Integration Success Criteria:
-Integration is only complete when:
-1. ✅ Component displays real API data instead of mock data
-2. ✅ Loading and error states work consistently with existing UI
-3. ✅ No existing functionality is broken
-4. ✅ Data types are consistent from database to component
-5. ✅ Integration follows established codebase patterns
-
 ### Sample Data Strategy
-- **PRIORITY 1**: Look for existing mock data in UI components first
-- Extract and migrate component mock data to database tables  
-- Preserve existing data structure and relationships when migrating
-- **PRIORITY 2**: Create new sample data only when no mock data exists
 - Always include realistic sample data
-- Populate tables with enough data to test UI components
+- Populate tables with enough data to test API endpoints
 - Include edge cases and varied data types
 
 ### Working Implementation Criteria
 An implementation is only complete when:
 1. ✅ Database schema is created and populated
 2. ✅ API endpoints return correct data with proper validation
-3. ✅ Components successfully integrate with APIs using existing patterns
-4. ✅ Loading/error states work consistently with existing UI
-5. ✅ User can see the feature working end-to-end
-6. ✅ No existing functionality is broken
+3. ✅ Database operations work correctly
 
 ## Code Quality Standards
 
