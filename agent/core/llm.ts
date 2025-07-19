@@ -28,14 +28,8 @@ export class LLMService {
     conversationHistory?: Anthropic.Messages.MessageParam[]
   ): Promise<{ response: string; conversationHistory: Anthropic.Messages.MessageParam[] }> {
     try {
-      // Check if query contains thinking triggers
-      const needsExtendedThinking = this.shouldUseExtendedThinking(query);
       
-      // Trigger thinking callback if extended thinking is needed
-      if (needsExtendedThinking && onThinking) {
-        onThinking('Analyzing query and planning approach...');
-      }
-      
+
       // Build messages for the conversation
       const messages: Anthropic.Messages.MessageParam[] = conversationHistory ? 
         [...conversationHistory, {
@@ -56,7 +50,7 @@ export class LLMService {
       // Log the actual request being sent to Anthropic API
       const requestPayload: Anthropic.MessageStreamParams = {
         model: this.model,
-        max_tokens: 2048,
+        max_tokens: 8192,
         system: [
           {
             type: "text",
@@ -70,6 +64,10 @@ export class LLMService {
           // Cache most frequently used tools: search_files, read_file, list_files
           ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
         })) : undefined,
+        thinking: {
+          type: "enabled",
+          budget_tokens: 4096
+        }
       };
       
       logger.debug('LLMService', 'Sending request to Anthropic API', {
@@ -82,7 +80,7 @@ export class LLMService {
         tools: tools.map(t => t.name)
       });
 
-      // Use streaming for real-time token counting
+      // Use streaming for real-time token counting with thinking mode
       const stream = this.client.messages.stream(requestPayload, {
         headers: {
           "anthropic-beta": "prompt-caching-2024-07-31"
@@ -91,6 +89,8 @@ export class LLMService {
 
       let fullResponse = '';
       let toolUseContent: any[] = [];
+      let currentThinking = '';
+      let currentSignature = '';
       
       // Process the stream
       for await (const chunk of stream) {
@@ -101,13 +101,26 @@ export class LLMService {
           throw abortError;
         }
         
- else if (chunk.type === 'content_block_start') {
+        if (chunk.type === 'content_block_start') {
           if (chunk.content_block.type === 'tool_use') {
             toolUseContent.push(chunk.content_block);
+          } else if (chunk.content_block.type === 'thinking') {
+            // Start of thinking block - reset thinking content and signature
+            currentThinking = '';
+            currentSignature = '';
           }
         } else if (chunk.type === 'content_block_delta') {
           if (chunk.delta.type === 'text_delta') {
             fullResponse += chunk.delta.text;
+          } else if (chunk.delta.type === 'thinking_delta') {
+            // Accumulate thinking content and send to callback
+            currentThinking += chunk.delta.thinking;
+            if (onThinking) {
+              onThinking(currentThinking);
+            }
+          } else if (chunk.delta.type === 'signature_delta') {
+            // Accumulate signature content
+            currentSignature += chunk.delta.signature;
           } else if (chunk.delta.type === 'input_json_delta') {
             // Handle tool use parameter streaming
             const lastToolUse = toolUseContent[toolUseContent.length - 1];
@@ -136,15 +149,36 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
-        const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
+        const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, currentThinking, currentSignature);
         
         // Build complete conversation history with tool interactions
         const finalHistory = [...completeHistory];
         
-        // Add assistant's tool_use blocks
+        // When thinking is enabled, we need to include thinking blocks in the conversation history
+        // Build the assistant's message with thinking block first, then tool_use blocks
+        const assistantContent: any[] = [];
+        
+        // Add thinking block if we have thinking content
+        if (currentThinking) {
+          const thinkingBlock: any = {
+            type: 'thinking',
+            thinking: currentThinking
+          };
+          
+          // Only include signature if we have one from the API
+          if (currentSignature) {
+            thinkingBlock.signature = currentSignature;
+          }
+          
+          assistantContent.push(thinkingBlock);
+        }
+        
+        // Add tool_use blocks
+        assistantContent.push(...toolUseContent);
+        
         finalHistory.push({
           role: 'assistant',
-          content: toolUseContent
+          content: assistantContent
         });
         
         // Add the tool results message that was added in handleToolUseFromStream
@@ -191,16 +225,39 @@ export class LLMService {
     onToolExecution?: (toolName: string) => void,
     abortSignal?: AbortSignal,
     onToolComplete?: (toolName: string, result: string, isError?: boolean) => void,
-    onGenerating?: () => void
+    onGenerating?: () => void,
+    currentThinking?: string,
+    currentSignature?: string
   ): Promise<string> {
     if (!toolManager) {
       return 'Tools are not available for this request.';
     }
 
+    // When thinking is enabled, build assistant message with thinking block first
+    const assistantContent: any[] = [];
+    
+    // Add thinking block if we have thinking content
+    if (currentThinking) {
+      const thinkingBlock: any = {
+        type: 'thinking',
+        thinking: currentThinking
+      };
+      
+      // Only include signature if we have one from the API
+      if (currentSignature) {
+        thinkingBlock.signature = currentSignature;
+      }
+      
+      assistantContent.push(thinkingBlock);
+    }
+    
+    // Add tool_use blocks
+    assistantContent.push(...toolUseContent);
+    
     // Add the assistant's response to the conversation
     messages.push({
       role: 'assistant',
-      content: toolUseContent
+      content: assistantContent
     });
 
     // Process all tool calls
@@ -267,7 +324,7 @@ export class LLMService {
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: this.model,
-      max_tokens: 2048,
+      max_tokens: 8192,
       system: [
         {
           type: "text",
@@ -281,6 +338,10 @@ export class LLMService {
         // Cache most frequently used tools: search_files, read_file, list_files
         ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
       })),
+      thinking: {
+        type: "enabled",
+        budget_tokens: 4096
+      }
     }, {
       headers: {
         "anthropic-beta": "prompt-caching-2024-07-31"
@@ -399,7 +460,7 @@ export class LLMService {
     // Get Claude's final response
     const finalResponse = await this.client.messages.create({
       model: this.model,
-      max_tokens: 2048,
+      max_tokens: 8192,
       system: [
         {
           type: "text",
@@ -413,6 +474,10 @@ export class LLMService {
         // Cache most frequently used tools: search_files, read_file, list_files
         ...(this.shouldCacheTool(tool.name) ? { cache_control: { type: "ephemeral" } } : {})
       })),
+      thinking: {
+        type: "enabled",
+        budget_tokens: 4096
+      }
     }, {
       headers: {
         "anthropic-beta": "prompt-caching-2024-07-31"
@@ -444,22 +509,4 @@ export class LLMService {
     return cachedTools.includes(toolName);
   }
 
-  private shouldUseExtendedThinking(query: string): boolean {
-    // Check for Claude 4 thinking triggers
-    const thinkingTriggers = ['think', 'think hard', 'think harder', 'ultrathink'];
-    const queryLower = query.toLowerCase();
-    
-    // Check for explicit thinking triggers
-    if (thinkingTriggers.some(trigger => queryLower.includes(trigger))) {
-      return true;
-    }
-    
-    // Check for complex problem indicators
-    const complexityIndicators = [
-      'complex', 'analyze', 'plan', 'strategy', 'approach', 'design',
-      'architecture', 'optimize', 'refactor', 'migrate', 'implement'
-    ];
-    
-    return complexityIndicators.some(indicator => queryLower.includes(indicator));
-  }
 }

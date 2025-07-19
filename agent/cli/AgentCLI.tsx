@@ -84,6 +84,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
             content: event.message,
             timestamp: new Date(),
           };
+          logger.debug("AgentCLI", "thinkingMessage", thinkingMessage)
           setMessages(prev => [...prev, thinkingMessage]);
         }
       } else if (event.type === 'plan') {
@@ -305,19 +306,25 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
                 {formatMarkdown(message.content)}
               </Text>
             ) : message.type === 'thinking' ? (
-              <Box marginBottom={1}>
-                <Text color="gray" dimColor>
-                  Thinking: {trimToMaxLines(message.content)}
+              <Box marginBottom={1} paddingX={1}>
+                <Text color="gray">
+                  {"Thinking:\n"}
+                  <Text dimColor>
+                    {trimToMaxLines(message.content)}
+                  </Text>
                 </Text>
               </Box>
             ) : message.type === 'toolResult' ? (
-              <Box marginBottom={1}>
-                <Text color="gray" dimColor>
-                  Tool Result: {trimToMaxLines(message.content)}
+              <Box marginBottom={1} paddingX={1}>
+                <Text color="gray">
+                  {"Tool Result:\n"}
+                  <Text dimColor>
+                   {trimToMaxLines(message.content)}
+                  </Text>
                 </Text>
               </Box>
             ) : message.type === 'toolError' ? (
-              <Box marginBottom={1}>
+              <Box marginBottom={1} paddingX={1}>
                 <Text color="red" dimColor>
                   Tool Error: {trimToMaxLines(message.content)}
                 </Text>
