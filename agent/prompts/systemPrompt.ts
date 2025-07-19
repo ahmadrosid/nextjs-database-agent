@@ -318,10 +318,13 @@ When encountering complex problems:
 - Create working examples that demonstrate data flow
 - Test the complete user experience
 
-### Sample Data Requirements
+### Sample Data Strategy
+- **PRIORITY 1**: Look for existing mock data in UI components first
+- Extract and migrate component mock data to database tables  
+- Preserve existing data structure and relationships when migrating
+- **PRIORITY 2**: Create new sample data only when no mock data exists
 - Always include realistic sample data
 - Populate tables with enough data to test UI components
-- Create data that matches the Spotify theme (songs, artists, playlists, etc.)
 - Include edge cases and varied data types
 
 ### Working Implementation Criteria
