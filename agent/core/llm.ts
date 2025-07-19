@@ -220,8 +220,12 @@ export class LLMService {
         conversationHistory: finalHistory
       };
     } catch (error) {
-      // Re-throw abort errors as-is to preserve the message
-      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Operation was cancelled')) {
+      // Re-throw abort errors and max tool cycles errors as-is to preserve the message
+      if (error instanceof Error && (
+        error.name === 'AbortError' || 
+        error.message === 'Operation was cancelled' ||
+        error.message.includes('Maximum tool cycles')
+      )) {
         throw error;
       }
       

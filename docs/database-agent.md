@@ -31,17 +31,32 @@ A modular database agent with core functionality that can be consumed via CLI in
 
 ## Folder Structure
 ```
-├── scripts/
-│   └── database-agent.js          # CLI entry point
-├── lib/
-│   └── agent/
-│       ├── core/                  # Core agent logic (interface-agnostic)
-│       │   ├── analyzer/          # Code analysis utilities
-│       │   ├── generator/         # Code generation logic
-│       │   └── database/          # Database operations
-│       ├── cli/                   # CLI interface components
-├── drizzle/                       # Database schema and migrations
-└── app/api/agent/                 # Generated API routes
+├── agent/
+│   ├── cli/
+│   │   └── AgentCLI.tsx          # CLI interface components
+│   ├── core/
+│   │   ├── CoreAgent.ts          # Core agent logic (interface-agnostic)
+│   │   ├── diff-edits/           # Advanced file editing utilities
+│   │   │   ├── README.md
+│   │   │   └── diff-apply.ts
+│   │   ├── llm.ts                # LLM service integration
+│   │   └── tools/                # Tool ecosystem
+│   │       ├── bashCommand.ts
+│   │       ├── diffEdit.ts
+│   │       ├── index.ts
+│   │       ├── listFiles.ts
+│   │       ├── readFile.ts
+│   │       ├── searchFiles.ts
+│   │       └── writeFile.ts
+│   ├── prompts/
+│   │   └── systemPrompt.ts       # System prompts and instructions
+│   ├── types/
+│   │   ├── index.ts              # Type definitions
+│   │   ├── tools.ts
+│   │   └── types.ts
+│   └── utils/
+│       ├── index.ts              # Utility functions
+│       └── logger.ts             # Logging utilities
 ```
 
 ## Architecture
@@ -64,8 +79,8 @@ The agent follows a layered architecture with three main components:
 │  │ • Conversation  │  │                 │  │             │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
-│                     Tool Ecosystem                         │
-│  listFiles | readFile | writeFile | bashCommand | search   │
+│                     Tool Ecosystem                          │
+│  listFiles | readFile | writeFile | bashCommand | searchFiles | diffEdit │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -88,14 +103,12 @@ The agent follows a layered architecture with three main components:
 - Error handling and result formatting
 - Claude API tool schema generation
 - Available tools: `listFiles`, `readFile`, `writeFile`, `bashCommand`, `searchFiles`, `diffEdit`
+- **diffEdit**: Advanced file editing using SEARCH/REPLACE blocks for precise modifications without rewriting entire files
 
 ### Terminal rendering - Reactive Pub/Sub Flow
 
-```
-  User Input → Spawn Background Job → Progress Events → Terminal UI Updates
-       ↓              ↓                      ↓               ↓
-    Terminal      Core Agent            Event Emitter    Live Rendering
-```
+![terminal-rendering-flow](./terminal-rendering-flow.png)
+
 
 ### Event-Driven Progress Flow
 
@@ -103,14 +116,58 @@ The agent follows a layered architecture with three main components:
 User Query → CoreAgent.processQuery() → Progress Events → CLI Rendering
 
 Events Emitted:
-├── thinking          # LLM reasoning process
-├── analyzing         # Database requirements analysis  
-├── executing_tools   # Tool execution notifications
-├── tool_execution_complete/error # Tool completion status
-├── generating        # Final response generation
-├── complete          # Query processed successfully
-└── error/aborted     # Error states
+├── thinking               # LLM reasoning process (streaming)
+├── thinking_complete      # Thinking output finalized
+├── analyzing             # Database requirements analysis  
+├── executing_tools       # Tool execution notifications
+├── tool_execution_complete # Tool completed successfully
+├── tool_execution_error  # Tool execution failed
+├── generating            # Final response generation
+├── plan                  # Implementation plan output
+├── complete              # Query processed successfully
+├── error                 # General error states
+└── aborted               # Operation cancelled by user
 ```
+
+### Agent Loop Logic
+
+The agent follows a sophisticated multi-turn conversation loop with tool execution:
+
+```
+1. Initial Request
+   ├── User Query → Build Messages → Add to Conversation History
+   └── Include System Prompt + Tools + Thinking Mode
+
+2. LLM Processing (Streaming)
+   ├── Thinking Phase: Stream reasoning process to UI
+   ├── Tool Decision: Determine if tools are needed
+   └── Response Generation: Stream text or tool calls
+
+3. Tool Execution Phase (if tools requested)
+   ├── Parse Tool Calls from LLM response
+   ├── Execute Tools Sequentially with abort signal support
+   ├── Collect Tool Results
+   └── Add Tool Results to Conversation History
+
+4. Recursive Loop (if more tools needed)
+   ├── Send Tool Results back to LLM
+   ├── LLM processes results and may request more tools
+   ├── Continue until LLM provides final text response
+   └── Handle up to N (20 max) tool cycles (prevents infinite loops)
+
+5. Final Response
+   ├── Extract final text response
+   ├── Update complete conversation history
+   └── Return response to user
+```
+
+**Key Features:**
+- **Thinking Mode**: Transparent reasoning with 4096 token budget
+- **Streaming**: Real-time progress updates during thinking and tool execution
+- **Recursive Tool Calls**: Agent can use tools, analyze results, then use more tools
+- **Conversation Memory**: Maintains 20-message rolling history
+- **Prompt Caching**: System prompt and top 3 tools cached for performance
+- **Abort Support**: All operations can be cancelled mid-execution
 
 **Reasoning**: Core agent logic separated from interface layers enables reusability across CLI and API. **Tradeoff**: More nested structure but cleaner separation of concerns and easier testing.
 
