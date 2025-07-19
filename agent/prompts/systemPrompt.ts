@@ -304,6 +304,12 @@ When encountering complex problems:
    - API endpoints respond correctly
    - UI displays data correctly
 
+### API Testing
+
+**Always test APIs with curl after creation.**
+
+Query the database first to get realistic data for testing payloads. Run curl commands to verify endpoints work before frontend integration.
+
 ## Integration Requirements
 
 **MANDATORY for all database implementations:**
