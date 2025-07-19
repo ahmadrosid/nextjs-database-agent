@@ -46,7 +46,50 @@ A modular database agent with core functionality that can be consumed via CLI in
 
 ## Architecture
 
-Reactive Pub/Sub Flow
+### Agent Core Architecture
+
+The agent follows a layered architecture with three main components:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CLI Interface                           │
+├─────────────────────────────────────────────────────────────┤
+│                     CoreAgent                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │   LLMService    │  │   ToolManager   │  │ EventEmitter│  │
+│  │                 │  │                 │  │             │  │
+│  │ • Anthropic API │  │ • Tool Registry │  │ • Progress  │  │
+│  │ • Tool Calling  │  │ • Execution     │  │ • Real-time │  │
+│  │ • Streaming     │  │ • Error Handle  │  │ • Updates   │  │
+│  │ • Conversation  │  │                 │  │             │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                     Tool Ecosystem                         │
+│  listFiles | readFile | writeFile | bashCommand | search   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+**CoreAgent** (`agent/core/CoreAgent.ts:8`)
+- Main orchestrator that coordinates LLM and tools
+- Manages conversation state and processing lifecycle
+- Emits progress events for UI consumption
+- Handles abort signals and error propagation
+
+**LLMService** (`agent/core/llm.ts:6`)
+- Anthropic API integration with streaming support
+- Tool calling coordination and response handling
+- Conversation history management with 20-message limit
+- Thinking mode integration for transparent reasoning
+
+**ToolManager** (`agent/core/tools/index.ts:10`)
+- Tool registration and execution orchestration
+- Error handling and result formatting
+- Claude API tool schema generation
+- Available tools: `listFiles`, `readFile`, `writeFile`, `bashCommand`, `searchFiles`, `diffEdit`
+
+### Terminal rendering - Reactive Pub/Sub Flow
 
 ```
   User Input → Spawn Background Job → Progress Events → Terminal UI Updates
@@ -54,4 +97,28 @@ Reactive Pub/Sub Flow
     Terminal      Core Agent            Event Emitter    Live Rendering
 ```
 
+### Event-Driven Progress Flow
+
+```
+User Query → CoreAgent.processQuery() → Progress Events → CLI Rendering
+
+Events Emitted:
+├── thinking          # LLM reasoning process
+├── analyzing         # Database requirements analysis  
+├── executing_tools   # Tool execution notifications
+├── tool_execution_complete/error # Tool completion status
+├── generating        # Final response generation
+├── complete          # Query processed successfully
+└── error/aborted     # Error states
+```
+
 **Reasoning**: Core agent logic separated from interface layers enables reusability across CLI and API. **Tradeoff**: More nested structure but cleaner separation of concerns and easier testing.
+
+Test Queries:
+1. “Can you store the recently played songs in a table”
+  The agent should create the table, populate it, and also create a route to fetch information from that table. 
+  BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.
+
+2. “Can you store the ‘Made for you’ and ‘Popular albums’ in a table”
+  The agent should create the tables, populate them, and also create a route to fetch information from those tables.
+  BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.
