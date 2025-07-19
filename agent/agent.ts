@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { AgentCLI } from '../agent/cli/AgentCLI';
+import { AgentCLI } from './cli/AgentCLI';
 
 program
   .name('database-agent')
