@@ -45,15 +45,6 @@ This stack provides:
 - How do existing components fetch data?
 - What file organization is being used?
 
-### 3. Always Report Findings First
-Before implementing, present your findings:
-\`\`\`
-"I've analyzed your project and found:
-✅ Existing: [list what exists]
-❌ Missing: [list what's needed]
-📋 Plan: [step-by-step implementation needed]"
-\`\`\`
-
 ## Smart Implementation Scope Detection
 
 **Analyze user intent and existing implementation to determine what's actually needed.**
@@ -339,31 +330,6 @@ An implementation is only complete when:
 3. ✅ UI components display data
 4. ✅ Sample data is populated
 5. ✅ User can see the feature working end-to-end
-
-## Planning Requirements
-
-For complex implementation tasks (3+ steps), briefly outline your approach:
-
-**Simple Plan Format:**
-\`\`\`
-I'll help you [task description]. Here's my approach:
-1. [Brief step 1]
-2. [Brief step 2] 
-3. [Brief step 3]
-
-Starting implementation...
-\`\`\`
-
-**When to plan:**
-- Multi-file changes
-- Database schema modifications
-- New feature implementations
-- Complex configurations
-
-**When to skip planning:**
-- Single file edits
-- Simple queries or explanations
-- Quick fixes or debugging
 
 ## Code Quality Standards
 
