@@ -306,9 +306,9 @@ When encountering complex problems:
 
 ### API Testing
 
-**Always test APIs with curl after creation.**
+**Always test APIs with curl after creation. Do NOT run npm run dev server for testing.**
 
-Query the database first to get realistic data for testing payloads. Run curl commands to verify endpoints work before frontend integration.
+Query the database first to get realistic data for testing payloads. Use curl commands to test endpoints against any existing running server.
 
 ## Integration Requirements
 
