@@ -29,6 +29,12 @@ export class CoreAgent extends EventEmitter {
     this.currentAbortController = new AbortController();
 
     try {
+      // Add user query to conversation history immediately to preserve context even if processing fails
+      const userMessage: Anthropic.Messages.MessageParam = {
+        role: 'user',
+        content: query
+      };
+      
       // Emit thinking event
       this.emitProgress({
         type: 'thinking',
@@ -126,6 +132,24 @@ export class CoreAgent extends EventEmitter {
 
       return response;
     } catch (error) {
+      // Preserve conversation context even when errors occur
+      // Add the user's query and an error response to maintain conversation flow
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      this.conversationHistory.push(
+        {
+          role: 'user',
+          content: query
+        },
+        {
+          role: 'assistant', 
+          content: `I encountered an error: ${errorMessage}`
+        }
+      );
+
+      // Keep conversation history manageable
+      if (this.conversationHistory.length > 20) {
+        this.conversationHistory = this.conversationHistory.slice(-20);
+      }
       // Handle abort signal
       if (error instanceof Error && error.name === 'AbortError') {
         this.emitProgress({
