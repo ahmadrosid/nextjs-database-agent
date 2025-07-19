@@ -7,7 +7,7 @@ export class LLMService {
   private client: Anthropic;
   private systemPrompt: string;
   private model: string;
-  private maxToolCycles: number = 20;
+  private maxToolCycles: number = 40;
   private currentToolCycle: number = 0;
 
   constructor() {
