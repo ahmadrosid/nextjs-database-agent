@@ -7,6 +7,8 @@ export class LLMService {
   private client: Anthropic;
   private systemPrompt: string;
   private model: string;
+  private maxToolCycles: number = 20;
+  private currentToolCycle: number = 0;
 
   constructor() {
     this.client = new Anthropic({
@@ -28,6 +30,8 @@ export class LLMService {
     conversationHistory?: Anthropic.Messages.MessageParam[]
   ): Promise<{ response: string; conversationHistory: Anthropic.Messages.MessageParam[] }> {
     try {
+      // Reset tool cycle counter for new query
+      this.currentToolCycle = 0;
       
 
       // Build messages for the conversation
@@ -149,6 +153,9 @@ export class LLMService {
 
       // Handle tool use response
       if (toolUseContent.length > 0) {
+        // Increment tool cycle counter
+        this.currentToolCycle++;
+        
         const result = await this.handleToolUseFromStream(toolUseContent, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating, currentThinking, currentSignature);
         
         // Build complete conversation history with tool interactions
@@ -355,6 +362,12 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
+      // Check tool cycle limit before recursing
+      if (this.currentToolCycle >= this.maxToolCycles) {
+        throw new Error(`Maximum tool cycles (${this.maxToolCycles}) exceeded. The agent may be stuck in a loop.`);
+      }
+      
+      this.currentToolCycle++;
       return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
     }
 
@@ -491,6 +504,12 @@ export class LLMService {
 
     // Handle potential additional tool calls recursively
     if (finalResponse.stop_reason === 'tool_use') {
+      // Check tool cycle limit before recursing
+      if (this.currentToolCycle >= this.maxToolCycles) {
+        throw new Error(`Maximum tool cycles (${this.maxToolCycles}) exceeded. The agent may be stuck in a loop.`);
+      }
+      
+      this.currentToolCycle++;
       return await this.handleToolUse(finalResponse, messages, toolManager, onToolExecution, abortSignal, onToolComplete, onGenerating);
     }
 
