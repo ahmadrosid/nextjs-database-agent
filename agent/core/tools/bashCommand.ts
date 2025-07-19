@@ -7,13 +7,13 @@ const execAsync = promisify(exec);
 
 export const bashCommandTool: Tool = {
   name: 'bash_command',
-  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, rm -rf, npm & npx commands). IMPORTANT: Always use --legacy-peer-deps flag with npm install commands to avoid peer dependency conflicts.',
+  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, npm & npx commands). IMPORTANT: Always use --legacy-peer-deps flag with npm install commands to avoid peer dependency conflicts.',
   parameters: {
     type: 'object',
     properties: {
       command: {
         type: 'string',
-        description: 'Bash command to execute. Allowed commands: mkdir, mv, rm -rf, npm, npx'
+        description: 'Bash command to execute. Allowed commands: mkdir, mv, npm, npx'
       },
       workingDirectory: {
         type: 'string',
@@ -31,12 +31,12 @@ export const bashCommandTool: Tool = {
 
       const command = params.command.trim();
       const workingDir = params.workingDirectory || '.';
-      
+
       // Validate command against allowlist
       const allowedCommands = [
         'mkdir',
         'mv',
-        'rm -rf',
+        'npx',
         'npm install',
         'npm run',
         'npm start',
@@ -47,9 +47,6 @@ export const bashCommandTool: Tool = {
       // Check if command starts with an allowed command
       const isAllowed = allowedCommands.some(allowedCmd => {
         const cmdParts = command.split(' ');
-        if (allowedCmd === 'rm -rf') {
-          return cmdParts.length >= 2 && cmdParts[0] === 'rm' && cmdParts[1] === '-rf';
-        }
         if (allowedCmd.startsWith('npm ')) {
           const npmSubcommand = allowedCmd.split(' ')[1];
           return cmdParts.length >= 2 && cmdParts[0] === 'npm' && cmdParts[1] === npmSubcommand;
@@ -78,38 +75,36 @@ export const bashCommandTool: Tool = {
       });
 
       let result = `Command executed successfully: ${command}`;
-      
       if (stdout) {
         result += `\nOutput: ${stdout.trim()}`;
       }
-      
+
       if (stderr) {
         result += `\nWarnings: ${stderr.trim()}`;
       }
 
       return result;
-
     } catch (error) {
       if (error instanceof Error) {
         // Handle abort signal
         if (error.name === 'AbortError') {
           return 'Error: Command was cancelled';
         }
-        
+
         // Handle timeout and other exec errors
         if (error.message.includes('timeout')) {
           return 'Error: Command timed out (30 second limit)';
         }
-        
+
         // Handle command execution errors
         if ('code' in error && 'stderr' in error) {
           const execError = error as any;
           return `Error: Command failed with exit code ${execError.code}\nStderr: ${execError.stderr}`;
         }
-        
+
         return `Error: ${error.message}`;
       }
-      
+
       return 'Error: Unknown error occurred';
     }
   }
