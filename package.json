@@ -11,7 +11,11 @@
     "agent": "tsx agent/agent.ts start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/lib/db/seed.ts",
+    "db:verify": "tsx src/lib/db/verify.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -52,6 +56,7 @@
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.8.1",
     "@vscode/ripgrep": "^1.15.14",
+    "better-sqlite3": "^12.2.0",
     "chalk": "^5.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -61,6 +66,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.0",
     "dotted-map": "^2.2.3",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.3",
     "embla-carousel-react": "^8.6.0",
     "eventemitter3": "^5.0.1",
     "execa": "^9.6.0",
@@ -105,6 +112,7 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
     "@types/marked-terminal": "^6.1.1",
