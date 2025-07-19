@@ -1,9 +1,9 @@
 # Database Agent Design Document
 
-## Agent Description
-A modular database agent with core functionality that can be consumed via CLI interface or API service, automatically implementing database features based on natural language queries.
+A reactive terminal interface that processes natural language queries to generate database schemas, API routes, and frontend integrations for Next.js applications.
 
 ## Features
+
 ### Core Agent
 - **Natural Language Processing**: Interprets user queries like "store recently played songs in a table"
 - **Code Analysis**: Scans existing Next.js components to understand integration points
@@ -15,7 +15,6 @@ A modular database agent with core functionality that can be consumed via CLI in
 - **Real-time Progress Display**: Shows agent thinking process, file operations, and current status
 - **Command Structure**: Supports various commands and options
 
-
 **Reasoning**: Modular design allows the core agent to be reused across different interfaces while maintaining focused functionality. **Tradeoff**: Added complexity in architecture but better extensibility and reusability.
 
 ## Package Selection
@@ -26,8 +25,33 @@ A modular database agent with core functionality that can be consumed via CLI in
 - **drizzle-orm**: TypeScript ORM for database operations as recommended
 - **execa**: Process execution for running migrations and commands
 - **fs-extra**: Enhanced file system operations for code generation
+- **@vscode/ripgrep**: Searching files based on the content
+- **globby**: Get file tree with respecting of gitignore
+- **cline diff-edits**: Edit source code based on search and replace algorithm from [cline diff apply](https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-26-25.ts)
 
-**Reasoning**: Proven packages that handle specific concerns well. EventEmitter3 chosen for optimal performance in real-time progress updates. **Tradeoff**: More dependencies but better maintainability and reliability than building from scratch.
+### Terminal rendering - Reactive Pub/Sub Flow
+
+![terminal-rendering-flow](./terminal-rendering-flow.png)
+
+
+### Event-Driven Progress Flow
+
+```
+User Query → CoreAgent.processQuery() → Progress Events → CLI Rendering
+
+Events Emitted:
+├── thinking               # LLM reasoning process (streaming)
+├── thinking_complete      # Thinking output finalized
+├── analyzing             # Database requirements analysis  
+├── executing_tools       # Tool execution notifications
+├── tool_execution_complete # Tool completed successfully
+├── tool_execution_error  # Tool execution failed
+├── generating            # Final response generation
+├── plan                  # Implementation plan output
+├── complete              # Query processed successfully
+├── error                 # General error states
+└── aborted               # Operation cancelled by user
+```
 
 ## Folder Structure
 ```
@@ -65,24 +89,7 @@ A modular database agent with core functionality that can be consumed via CLI in
 
 The agent follows a layered architecture with three main components:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     CLI Interface                           │
-├─────────────────────────────────────────────────────────────┤
-│                     CoreAgent                               │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
-│  │   LLMService    │  │   ToolManager   │  │ EventEmitter│  │
-│  │                 │  │                 │  │             │  │
-│  │ • Anthropic API │  │ • Tool Registry │  │ • Progress  │  │
-│  │ • Tool Calling  │  │ • Execution     │  │ • Real-time │  │
-│  │ • Streaming     │  │ • Error Handle  │  │ • Updates   │  │
-│  │ • Conversation  │  │                 │  │             │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                     Tool Ecosystem                          │
-│  listFiles | readFile | writeFile | bashCommand | searchFiles | diffEdit │
-└─────────────────────────────────────────────────────────────┘
-```
+![agent-architecture.png](agent-architecture.png)
 
 ### Component Responsibilities
 
@@ -104,30 +111,6 @@ The agent follows a layered architecture with three main components:
 - Claude API tool schema generation
 - Available tools: `listFiles`, `readFile`, `writeFile`, `bashCommand`, `searchFiles`, `diffEdit`
 - **diffEdit**: Advanced file editing using SEARCH/REPLACE blocks for precise modifications without rewriting entire files
-
-### Terminal rendering - Reactive Pub/Sub Flow
-
-![terminal-rendering-flow](./terminal-rendering-flow.png)
-
-
-### Event-Driven Progress Flow
-
-```
-User Query → CoreAgent.processQuery() → Progress Events → CLI Rendering
-
-Events Emitted:
-├── thinking               # LLM reasoning process (streaming)
-├── thinking_complete      # Thinking output finalized
-├── analyzing             # Database requirements analysis  
-├── executing_tools       # Tool execution notifications
-├── tool_execution_complete # Tool completed successfully
-├── tool_execution_error  # Tool execution failed
-├── generating            # Final response generation
-├── plan                  # Implementation plan output
-├── complete              # Query processed successfully
-├── error                 # General error states
-└── aborted               # Operation cancelled by user
-```
 
 ### Agent Loop Logic
 
@@ -169,7 +152,7 @@ The agent follows a sophisticated multi-turn conversation loop with tool executi
 - **Prompt Caching**: System prompt and top 3 tools cached for performance
 - **Abort Support**: All operations can be cancelled mid-execution
 
-**Reasoning**: Core agent logic separated from interface layers enables reusability across CLI and API. **Tradeoff**: More nested structure but cleaner separation of concerns and easier testing.
+Core agent logic separated from interface layers enables reusability across CLI and API. **Tradeoff**: More nested structure but cleaner separation of concerns and easier testing.
 
 Test Queries:
 1. “Can you store the recently played songs in a table”
