@@ -29,12 +29,6 @@ export class CoreAgent extends EventEmitter {
     this.currentAbortController = new AbortController();
 
     try {
-      // Add user query to conversation history immediately to preserve context even if processing fails
-      const userMessage: Anthropic.Messages.MessageParam = {
-        role: 'user',
-        content: query
-      };
-      
       // Emit thinking event
       this.emitProgress({
         type: 'thinking',
@@ -118,11 +112,6 @@ export class CoreAgent extends EventEmitter {
       // Validate the conversation history to ensure proper tool_use/tool_result pairing
       this.conversationHistory = this.validateConversationHistory(result.conversationHistory);
 
-      // Keep conversation history manageable (limit to last 10 exchanges = 20 messages)
-      if (this.conversationHistory.length > 20) {
-        this.conversationHistory = this.conversationHistory.slice(-20);
-      }
-
       this.emitProgress({
         type: 'complete',
         message: 'Query processed successfully',
@@ -146,10 +135,6 @@ export class CoreAgent extends EventEmitter {
         }
       );
 
-      // Keep conversation history manageable
-      if (this.conversationHistory.length > 20) {
-        this.conversationHistory = this.conversationHistory.slice(-20);
-      }
       // Handle abort signal
       if (error instanceof Error && error.name === 'AbortError') {
         this.emitProgress({
@@ -161,6 +146,13 @@ export class CoreAgent extends EventEmitter {
         // Re-throw the original error to preserve the message
         throw error;
       }
+
+      // Log the error with context
+      logger.error('CoreAgent', 'Failed to process query', { 
+        query, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
 
       this.emitProgress({
         type: 'error',

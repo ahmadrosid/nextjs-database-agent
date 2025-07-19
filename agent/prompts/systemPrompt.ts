@@ -97,10 +97,15 @@ After context discovery, determine implementation scope based on:
    - Create POST route to add new records
    - Add UPDATE and DELETE routes if relevant
    - Implement proper error handling and validation
-   - **CRITICAL**: Always validate foreign key references before inserting data
+   - **IMPORTANT**: Always validate foreign key references before inserting data
      • When inserting records with ID references, verify referenced records exist
      • Return appropriate error responses for invalid references
      • Use database queries to check existence before insertion
+   - **REQUIRED: Payload Validation**
+     • Zod Validation: Always validate API request/response payloads with Zod schemas
+     • Shared Types: Export TypeScript types from schemas for frontend use
+     • Error Responses: Return structured validation errors with 400 status
+     • Test Integration: Verify frontend handles both success and validation error responses
 
 4. **Integration Ready** (if missing):
    - Export database functions for use in components
