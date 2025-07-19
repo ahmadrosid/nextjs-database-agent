@@ -7,13 +7,13 @@ const execAsync = promisify(exec);
 
 export const bashCommandTool: Tool = {
   name: 'bash_command',
-  description: 'Execute allowed bash commands for file operations and npm package management (mkdir, mv, npm & npx commands). IMPORTANT: Always use --legacy-peer-deps flag with npm install commands to avoid peer dependency conflicts.',
+  description: 'Execute allowed bash commands for file operations, npm package management, and (mkdir, mv, npm & npx commands, curl). IMPORTANT: Always use --legacy-peer-deps flag with npm install commands to avoid peer dependency conflicts.',
   parameters: {
     type: 'object',
     properties: {
       command: {
         type: 'string',
-        description: 'Bash command to execute. Allowed commands: mkdir, mv, npm, npx'
+        description: 'Bash command to execute. Allowed commands: mkdir, mv, npm, npx, curl'
       },
       workingDirectory: {
         type: 'string',
@@ -41,7 +41,8 @@ export const bashCommandTool: Tool = {
         'npm run',
         'npm start',
         'npm test',
-        'npm build'
+        'npm build',
+        'curl'
       ];
 
       // Check if command starts with an allowed command
