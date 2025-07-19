@@ -314,6 +314,35 @@ When encountering complex problems:
 - Create working examples that demonstrate data flow
 - Test the complete user experience
 
+### API-Component Integration Standards
+
+**CRITICAL: Always follow existing data fetching patterns in the codebase.**
+
+#### Integration Discovery (Required Before Any Integration):
+1. **Analyze Existing Patterns**: Find how components currently fetch data (useEffect, custom hooks, state management)
+2. **Identify Target Components**: Locate components with static/mock data that need API integration
+3. **Check Data Flow**: Understand existing loading states, error handling, and data transformation patterns
+
+#### Integration Rules:
+1. **Match Existing Patterns**: Never introduce new data fetching approaches - use what the codebase already uses
+2. **Preserve All Functionality**: Modify components, don't rewrite them
+3. **Maintain UI Consistency**: Keep existing loading states, error messages, and layout behavior
+4. **Ensure Type Safety**: API responses must match component prop interfaces exactly
+
+#### Integration Requirements:
+- Replace static data with API calls using existing patterns
+- Add proper loading and error states that match codebase style
+- Verify data flows correctly from API to UI
+- Test that components handle empty/error scenarios gracefully
+
+#### Integration Success Criteria:
+Integration is only complete when:
+1. ✅ Component displays real API data instead of mock data
+2. ✅ Loading and error states work consistently with existing UI
+3. ✅ No existing functionality is broken
+4. ✅ Data types are consistent from database to component
+5. ✅ Integration follows established codebase patterns
+
 ### Sample Data Strategy
 - **PRIORITY 1**: Look for existing mock data in UI components first
 - Extract and migrate component mock data to database tables  
@@ -325,11 +354,12 @@ When encountering complex problems:
 
 ### Working Implementation Criteria
 An implementation is only complete when:
-1. ✅ Database schema is created
-2. ✅ API endpoints work correctly
-3. ✅ UI components display data
-4. ✅ Sample data is populated
+1. ✅ Database schema is created and populated
+2. ✅ API endpoints return correct data with proper validation
+3. ✅ Components successfully integrate with APIs using existing patterns
+4. ✅ Loading/error states work consistently with existing UI
 5. ✅ User can see the feature working end-to-end
+6. ✅ No existing functionality is broken
 
 ## Code Quality Standards
 
