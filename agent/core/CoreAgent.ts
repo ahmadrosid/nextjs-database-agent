@@ -109,7 +109,8 @@ export class CoreAgent extends EventEmitter {
       }
 
       // Update conversation history with the complete history from LLMService (includes tool interactions)
-      this.conversationHistory = result.conversationHistory;
+      // Validate the conversation history to ensure proper tool_use/tool_result pairing
+      this.conversationHistory = this.validateConversationHistory(result.conversationHistory);
 
       // Keep conversation history manageable (limit to last 10 exchanges = 20 messages)
       if (this.conversationHistory.length > 20) {
@@ -163,5 +164,41 @@ export class CoreAgent extends EventEmitter {
     if (this.currentAbortController) {
       this.currentAbortController.abort();
     }
+  }
+
+  private validateConversationHistory(history: Anthropic.Messages.MessageParam[]): Anthropic.Messages.MessageParam[] {
+    const validatedHistory: Anthropic.Messages.MessageParam[] = [];
+    const toolUseIds = new Set<string>();
+
+    for (const message of history) {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // Track tool_use IDs from assistant messages
+        for (const content of message.content) {
+          if (typeof content === 'object' && content.type === 'tool_use' && 'id' in content) {
+            toolUseIds.add(content.id);
+          }
+        }
+        validatedHistory.push(message);
+      } else if (message.role === 'user' && Array.isArray(message.content)) {
+        // Validate tool_result messages have corresponding tool_use
+        const validContent = message.content.filter(content => {
+          if (typeof content === 'object' && content.type === 'tool_result' && 'tool_use_id' in content) {
+            return toolUseIds.has(content.tool_use_id);
+          }
+          return true;
+        });
+
+        if (validContent.length > 0) {
+          validatedHistory.push({
+            ...message,
+            content: validContent
+          });
+        }
+      } else {
+        validatedHistory.push(message);
+      }
+    }
+
+    return validatedHistory;
   }
 }

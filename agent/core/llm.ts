@@ -182,9 +182,14 @@ export class LLMService {
         });
         
         // Add the tool results message that was added in handleToolUseFromStream
-        // The tool results are the last message added to the messages array
-        const toolResultsMessage = messages[messages.length - 1];
-        if (toolResultsMessage && toolResultsMessage.role === 'user') {
+        // Find the tool results message (should be the last user message in the messages array)
+        const toolResultsMessage = messages.find((msg, index) => 
+          msg.role === 'user' && 
+          index > completeHistory.length - 1 && // Only look at messages added after our initial history
+          Array.isArray(msg.content) && 
+          msg.content.some((content: any) => content.type === 'tool_result')
+        );
+        if (toolResultsMessage) {
           finalHistory.push(toolResultsMessage);
         }
         

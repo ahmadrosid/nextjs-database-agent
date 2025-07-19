@@ -371,7 +371,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           value={input}
           onChange={setInput}
           onSubmit={handleSubmit}
-          placeholder="Enter your database query..."
+          placeholder="Enter your query..."
         />
       </Box>
     </Box>
