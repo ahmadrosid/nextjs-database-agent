@@ -2,6 +2,8 @@
 
 A reactive terminal interface that processes natural language queries to generate database schemas, API routes, and frontend integrations for Next.js applications.
 
+[Detail presentations](https://excalidraw.com/#json=nkoU8UnPz2fb_fsgW3Zcj,j2m3LdXNALfY0LaY_rnIIA)
+
 ## Features
 
 ### Core Agent
