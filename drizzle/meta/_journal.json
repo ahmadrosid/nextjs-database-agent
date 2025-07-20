@@ -8,6 +8,13 @@
       "when": 1752990440768,
       "tag": "0000_wise_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1752991931713,
+      "tag": "0001_nebulous_nehzno",
+      "breakpoints": true
     }
   ]
 }
