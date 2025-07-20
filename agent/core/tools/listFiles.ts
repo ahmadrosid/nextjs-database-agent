@@ -46,7 +46,8 @@ export const listFilesTool: Tool = {
         dot: includeHidden,
         onlyFiles: false, // Include both files and directories
         markDirectories: true, // Mark directories with trailing slash
-        absolute: false // Return relative paths
+        absolute: false, // Return relative paths
+        ignore: ['.git/**', './agent/**']
       });
       
       // Check if operation was aborted after globby
