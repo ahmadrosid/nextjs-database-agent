@@ -1,5 +1,5 @@
 // Mock for marked-terminal to avoid emojilib dependency issues
-const markedTerminal = jest.fn((options) => {
+export const markedTerminal = jest.fn((options) => {
   // Return a renderer that doesn't use the chalk options
   return {
     code: jest.fn((text) => text),
@@ -23,5 +23,3 @@ const markedTerminal = jest.fn((options) => {
     text: jest.fn((text) => text),
   };
 });
-
-module.exports = { markedTerminal };

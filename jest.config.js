@@ -4,7 +4,7 @@ const config = {
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^marked-terminal$': '<rootDir>/__mocks__/marked-terminal.js',
+    '^marked-terminal$': '<rootDir>/__mocks__/marked-terminal.ts',
   },
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
