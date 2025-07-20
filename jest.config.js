@@ -22,7 +22,7 @@ const config = {
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chalk|ink|ink-text-input|globby|emojilib|node-emoji|marked-terminal)/)'
+    'node_modules/(?!(chalk|ink|globby|emojilib|node-emoji|marked-terminal)/)'
   ],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [

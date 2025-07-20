@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { AgentCLI } from '../../agent/cli/AgentCLI';
+import { AgentTerminalUI } from '../../agent/cli/AgentTerminalUI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -31,21 +31,23 @@ jest.mock('ink', () => ({
   useInput: jest.fn(),
 }));
 
-// Mock ink-text-input
-jest.mock('ink-text-input', () => ({
-  default: jest.fn(),
+// Mock text input component
+jest.mock('../../agent/cli/text-input', () => ({
+  TextInput: jest.fn(),
+  useTextInput: jest.fn(() => ({ inputValue: 'test' })),
 }));
 
+
 describe('CLI Integration Tests', () => {
-  let cli: AgentCLI;
+  let cli: AgentTerminalUI;
   let mockRender: jest.Mock;
-  let consoleSpy: jest.SpyInstance;
+  let consoleSpy: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockRender = require('ink').render;
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-    cli = new AgentCLI();
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    cli = new AgentTerminalUI();
   });
 
   afterEach(() => {
@@ -89,11 +91,11 @@ describe('CLI Integration Tests', () => {
 
   describe('CLI Class Behavior', () => {
     it('should be instantiable multiple times', () => {
-      const cli1 = new AgentCLI();
-      const cli2 = new AgentCLI();
+      const cli1 = new AgentTerminalUI();
+      const cli2 = new AgentTerminalUI();
 
-      expect(cli1).toBeInstanceOf(AgentCLI);
-      expect(cli2).toBeInstanceOf(AgentCLI);
+      expect(cli1).toBeInstanceOf(AgentTerminalUI);
+      expect(cli2).toBeInstanceOf(AgentTerminalUI);
       expect(cli1).not.toBe(cli2);
     });
 

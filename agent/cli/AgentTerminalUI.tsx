@@ -2,7 +2,7 @@ import 'dotenv/config'
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';
-import TextInput from 'ink-text-input';
+import {TextInput} from './text-input';
 import chalk from 'chalk';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
@@ -37,11 +37,11 @@ interface OutputMessage {
   progressType?: ProgressEvent['type'];
 }
 
-interface DatabaseAgentAppProps {
+interface AgentTerminalAppProps {
   initialPrompt?: string;
 }
 
-const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) => {
+const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<OutputMessage[]>([
     {
@@ -84,7 +84,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
             content: event.message,
             timestamp: new Date(),
           };
-          logger.debug("AgentCLI", "thinkingMessage", thinkingMessage)
+          logger.debug("AgentTerminalUI", "thinkingMessage", thinkingMessage)
           setMessages(prev => [...prev, thinkingMessage]);
         }
       } else if (event.type === 'plan') {
@@ -139,7 +139,7 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
           };
           newStatus = statusMap[event.type] || event.type;
         }
-        logger.debug("AgentCLI", "newStatus", {newStatus});
+        logger.debug("AgentTerminalUI", "newStatus", {newStatus});
         setCurrentStatus(newStatus);
         
         // Start timer when processing begins
@@ -368,19 +368,19 @@ const DatabaseAgentApp: React.FC<DatabaseAgentAppProps> = ({ initialPrompt }) =>
       <Box borderStyle="round" borderColor="gray" paddingX={1} marginBottom={2} flexShrink={0}>
         <Text color="gray">Orchids: </Text>
         <TextInput
-          value={input}
-          onChange={setInput}
-          onSubmit={handleSubmit}
           placeholder="Enter your query..."
+          onSubmit={query => {
+            handleSubmit(query)
+          }}
         />
       </Box>
     </Box>
   );
 };
 
-export class AgentCLI {
+export class AgentTerminalUI {
   start(initialPrompt?: string) {
     console.log(chalk.gray('Starting Database Agent CLI...'));
-    render(<DatabaseAgentApp initialPrompt={initialPrompt} />);
+    render(<AgentTerminalApp initialPrompt={initialPrompt} />);
   }
 }

@@ -31,19 +31,29 @@ jest.mock('chalk', () => ({
   yellow: jest.fn((text: string) => text),
   cyan: jest.fn((text: string) => text),
   gray: jest.fn((text: string) => text),
+  inverse: jest.fn((text: string) => text),
+  dim: jest.fn((text: string) => text),
 }));
 
-// Mock ink-text-input
-jest.mock('ink-text-input', () => ({
-  default: ({ value, onChange, onSubmit, placeholder }: any) => 
-    React.createElement('input', {
-      value,
-      onChange: (e: any) => onChange(e.target.value),
-      onKeyDown: (e: any) => e.key === 'Enter' && onSubmit(e.target.value),
+// Mock text input component
+jest.mock('../../agent/cli/text-input', () => ({
+  TextInput: ({ isDisabled, placeholder, defaultValue, onChange, onSubmit }: any) => {
+    const React = require('react');
+    return React.createElement('input', {
+      value: defaultValue || '',
       placeholder,
+      disabled: isDisabled,
+      onChange: (e: any) => onChange?.(e.target.value),
+      onKeyDown: (e: any) => {
+        if (e.key === 'Enter') {
+          onSubmit?.(e.target.value);
+        }
+      },
       'data-testid': 'text-input'
-    }),
+    });
+  },
 }));
+
 
 // Import the component after mocking
 import { AgentCLI } from '../../agent/cli/AgentCLI';
@@ -86,7 +96,7 @@ const DatabaseAgentApp: React.FC = () => {
   }, []);
 
   const { Box, Text } = require('ink');
-  const TextInput = require('ink-text-input').default;
+  const { TextInput } = require('../../agent/cli/text-input');
 
   return React.createElement(Box, { flexDirection: 'column' },
     React.createElement(Box, { flexDirection: 'column', flexGrow: 1 },

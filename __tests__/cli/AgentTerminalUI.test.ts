@@ -21,7 +21,7 @@ jest.mock('chalk', () => {
   return chalk;
 });
 
-import { AgentCLI } from '../../agent/cli/AgentCLI';
+import { AgentTerminalUI } from '../../agent/cli/AgentTerminalUI';
 
 // Mock Ink components
 jest.mock('ink', () => ({
@@ -31,18 +31,15 @@ jest.mock('ink', () => ({
   useInput: jest.fn(),
 }));
 
-// Mock ink-text-input
-jest.mock('ink-text-input', () => ({
-  default: jest.fn(({ value, onChange, onSubmit, placeholder }) => ({
-    value,
-    onChange,
-    onSubmit,
-    placeholder,
-  })),
+// Mock text input component
+jest.mock('../../agent/cli/text-input', () => ({
+  TextInput: jest.fn(),
+  useTextInput: jest.fn(() => ({ inputValue: 'test' })),
 }));
 
-describe('AgentCLI', () => {
-  let cli: AgentCLI;
+
+describe('AgentTerminalUI', () => {
+  let cli: AgentTerminalUI;
   let mockRender: jest.Mock;
   let mockChalk: any;
 
@@ -55,12 +52,12 @@ describe('AgentCLI', () => {
     mockChalk = require('chalk');
     
     // Create new CLI instance
-    cli = new AgentCLI();
+    cli = new AgentTerminalUI();
   });
 
   describe('constructor', () => {
-    it('should create a new AgentCLI instance', () => {
-      expect(cli).toBeInstanceOf(AgentCLI);
+    it('should create a new AgentTerminalUI instance', () => {
+      expect(cli).toBeInstanceOf(AgentTerminalUI);
     });
   });
 

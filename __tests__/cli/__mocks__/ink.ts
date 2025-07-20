@@ -28,21 +28,13 @@ export const chalk = {
   gray: jest.fn((text: string) => text),
 };
 
-// Mock for ink-text-input
-export const TextInput = jest.fn(({ value, onChange, onSubmit, placeholder }) => {
-  return {
-    value,
-    onChange,
-    onSubmit,
-    placeholder,
-  };
-});
 
-export default {
+const inkMock = {
   render,
   Box,
   Text,
   useInput,
-  TextInput,
   chalk,
 };
+
+export default inkMock;

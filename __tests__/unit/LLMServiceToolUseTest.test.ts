@@ -100,10 +100,10 @@ describe('LLMService Tool Use and Infinite Loop Prevention', () => {
           jest.fn(), // onGenerating
           [] // empty conversation history
         )
-      ).rejects.toThrow('Maximum tool cycles (20) exceeded. The agent may be stuck in a loop.');
+      ).rejects.toThrow('Maximum tool cycles (40) exceeded. The agent may be stuck in a loop.');
 
-      // Verify that the tool was called 20 times before the error
-      expect(mockAnthropicClient.messages.create).toHaveBeenCalledTimes(20);
+      // Verify that the tool was called 40 times before the error
+      expect(mockAnthropicClient.messages.create).toHaveBeenCalledTimes(40);
     });
 
     it('should reset tool cycle counter for new queries', async () => {
