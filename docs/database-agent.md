@@ -154,11 +154,14 @@ The agent follows a sophisticated multi-turn conversation loop with tool executi
 
 Core agent logic separated from interface layers enables reusability across CLI and API. **Tradeoff**: More nested structure but cleaner separation of concerns and easier testing.
 
-Test Queries:
-1. “Can you store the recently played songs in a table”
-  The agent should create the table, populate it, and also create a route to fetch information from that table. 
-  BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.
+## Test Queries:
 
-2. “Can you store the ‘Made for you’ and ‘Popular albums’ in a table”
-  The agent should create the tables, populate them, and also create a route to fetch information from those tables.
-  BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.
+Can you store the recently played songs in a table
+
+> The agent should create the table, populate it, and also create a route to fetch information from that table. 
+> BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.
+
+Can you store the ‘Made for you’ and ‘Popular albums’ in a table
+
+> The agent should create the tables, populate them, and also create a route to fetch information from those tables.
+> BONUS: integrate the route into the existing code so that the site actually fetches the data and properly displays it on the frontend.

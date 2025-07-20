@@ -243,7 +243,6 @@ const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) =>
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, queuedUserMessage]);
-      setInput('');
       return;
     }
 
@@ -256,7 +255,6 @@ const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) =>
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput(''); // Clear input immediately after submit
 
     // Process query with CoreAgent
     try {

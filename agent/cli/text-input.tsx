@@ -97,7 +97,8 @@ type Action =
 	| MoveCursorLeftAction
 	| MoveCursorRightAction
 	| InsertAction
-	| DeleteAction;
+	| DeleteAction
+	| ClearAction;
 
 type MoveCursorLeftAction = {
 	type: 'move-cursor-left';
@@ -114,6 +115,10 @@ type InsertAction = {
 
 type DeleteAction = {
 	type: 'delete';
+};
+
+type ClearAction = {
+	type: 'clear';
 };
 
 const reducer: Reducer<State, Action> = (state, action) => {
@@ -154,6 +159,15 @@ const reducer: Reducer<State, Action> = (state, action) => {
 					state.value.slice(0, newCursorOffset) +
 					state.value.slice(newCursorOffset + 1),
 				cursorOffset: newCursorOffset,
+			};
+		}
+
+		case 'clear': {
+			return {
+				...state,
+				previousValue: state.value,
+				value: '',
+				cursorOffset: 0,
 			};
 		}
 	}
@@ -212,6 +226,10 @@ const useTextInputState = ({
 
 	const submit = useCallback(() => {
 		onSubmit?.(state.value);
+		// Clear the input after submit
+		dispatch({
+			type: 'clear',
+		});
 	}, [state.value, onSubmit]);
 
 	useEffect(() => {
