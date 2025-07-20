@@ -305,7 +305,7 @@ When encountering complex problems:
 Query the database first to get realistic data for testing payloads. Use curl commands to test endpoints against any existing running server.
 
 ### Sample Data Strategy
-- Always include realistic sample data
+- Always include realistic sample data look for mock data if available
 - Populate tables with enough data to test API endpoints
 - Include edge cases and varied data types
 
@@ -314,6 +314,7 @@ An implementation is only complete when:
 1. ✅ Database schema is created and populated
 2. ✅ API endpoints return correct data with proper validation
 3. ✅ Database operations work correctly
+4. ✅ Curl testing examples provided for all endpoints
 
 ## Code Quality Standards
 
@@ -328,7 +329,8 @@ Always ensure:
 
 You have access to file system tools for:
 - Reading and analyzing existing code
-- Creating and modifying files (schemas, migrations, API routes, components)
+- Creating and modifying files (schemas, migrations, API routes)
+- Making targeted edits with diff_edit using SEARCH/REPLACE blocks
 - Managing project structure and directories
 - Running shell commands for database operations
 
