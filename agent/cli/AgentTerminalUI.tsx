@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { render, Box, Text, useInput } from 'ink';
 import {TextInput} from './text-input';
 import chalk from 'chalk';
@@ -43,6 +43,7 @@ interface AgentTerminalAppProps {
 
 const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) => {
   const [input, setInput] = useState('');
+  const textInputRef = useRef<{ clear: () => void }>(null);
   const [messages, setMessages] = useState<OutputMessage[]>([
     {
       id: '1',
@@ -255,6 +256,9 @@ const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) =>
     };
 
     setMessages(prev => [...prev, userMessage]);
+    
+    // Clear the input after adding the message
+    textInputRef.current?.clear();
 
     // Process query with CoreAgent
     try {
@@ -290,6 +294,10 @@ const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) =>
         setCurrentStatus('');
         setElapsedTime(0);
       }
+    }
+    // Ignore Shift+Enter to let TextInput handle it
+    if (key.shift && key.return) {
+      return;
     }
   });
 
@@ -366,6 +374,7 @@ const AgentTerminalApp: React.FC<AgentTerminalAppProps> = ({ initialPrompt }) =>
       <Box borderStyle="round" borderColor="gray" paddingX={1} marginBottom={2} flexShrink={0}>
         <Text color="gray">Orchids: </Text>
         <TextInput
+          ref={textInputRef}
           placeholder="Enter your query..."
           onSubmit={query => {
             handleSubmit(query)
