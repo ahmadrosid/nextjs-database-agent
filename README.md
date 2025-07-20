@@ -12,8 +12,6 @@ A database agent that produces code for NextJS applications. This agent generate
 - The agent system prompt is tuned specifically for the Claude Sonnet 4 model (claude-sonnet-4-20250514). 
 - It typically completes one full implementation in 4-8 minutes, with costs ranging from $1.5-$2 per complete workflow implementation.
 
-Read [database-agent.md](./docs/database-agent.md) for detailed information about the architecture, design decisions, and implementation strategies behind this agent.
-
 ## How to test?
 
 Setup the `.env`
@@ -51,6 +49,8 @@ npm run agent
 ```
 
 ## Agent Architecture
+
+Read [database-agent.md](./docs/database-agent.md) for detailed information about the architecture, design decisions, and implementation strategies behind this agent.
 
 ![agent-architecture.png](./docs/agent-architecture.png)
 
